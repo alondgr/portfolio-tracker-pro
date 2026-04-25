@@ -348,7 +348,7 @@ export default function Dashboard() {
                   {sortedHoldings.length === 0 ? (
                     <tr>
                       <td colSpan={11} className="p-8 text-center text-fintech-muted">
-                        No holdings found. Click "New Stock" to start tracking.
+                        No holdings found. Click &quot;New Stock&quot; to start tracking.
                       </td>
                     </tr>
                   ) : (
