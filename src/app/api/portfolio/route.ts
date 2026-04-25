@@ -3,8 +3,6 @@ import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs';
 import { prisma } from '@/lib/prisma';
 import yf from 'yahoo-finance2';
-// @ts-ignore
-const yahooFinance = new (yf.YahooFinance || yf)();
 
 // Helper to reliably read holdings from database
 async function getHoldings(userId: string) {

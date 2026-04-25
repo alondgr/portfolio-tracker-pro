@@ -3,10 +3,8 @@ import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs';
 import { prisma } from '@/lib/prisma';
 import yf from 'yahoo-finance2';
-// @ts-ignore
-const yahooFinance = new (yf.YahooFinance || yf)();
-
 export async function GET() {
+  const yahooFinance = new (yf.YahooFinance || yf)();
   try {
     const { userId } = auth();
     if (!userId) return new NextResponse('Unauthorized', { status: 401 });
