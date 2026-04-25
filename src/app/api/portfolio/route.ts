@@ -2,9 +2,9 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs';
 import { prisma } from '@/lib/prisma';
-import { YahooFinance } from 'yahoo-finance2';
-
-const yahooFinance = new YahooFinance();
+import yf from 'yahoo-finance2';
+// @ts-ignore
+const yahooFinance = new (yf.YahooFinance || yf)();
 
 // Helper to reliably read holdings from database
 async function getHoldings(userId: string) {
