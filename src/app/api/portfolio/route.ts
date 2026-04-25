@@ -41,6 +41,7 @@ async function getHoldings(userId: string) {
 
 // GET: Fetch our holdings, compute aggregate values from transactions, and get real-time quotes
 export async function GET() {
+  const yahooFinance = new (yf.YahooFinance || yf)();
   try {
     const { userId } = auth();
     if (!userId) return new NextResponse('Unauthorized', { status: 401 });
