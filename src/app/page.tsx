@@ -2,15 +2,19 @@
 
 import React, { useEffect, useState } from 'react';
 import AllocationCharts from '@/components/AllocationCharts';
-import { Plus, TrendingUp, TrendingDown, RefreshCw, AlertCircle, RefreshCcw, ArrowUpDown, ChevronUp, ChevronDown, Trash2, Edit2 } from 'lucide-react';
+import PerformanceChart from '@/components/PerformanceChart';
+import { Plus, TrendingUp, TrendingDown, RefreshCw, AlertCircle, RefreshCcw, ArrowUpDown, ChevronUp, ChevronDown, Trash2, Edit2, Eye, EyeOff } from 'lucide-react';
+import { UserButton } from '@clerk/nextjs';
 
 const HATEFUL_8 = ['NVDA', 'PLTR', 'COIN', 'CRCL', 'GOLD', 'OXY', 'B', 'NEE', 'IRM'];
 
 export default function Dashboard() {
   const [holdings, setHoldings] = useState<any[]>([]);
+  const [performanceData, setPerformanceData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showHateful8, setShowHateful8] = useState(false);
+  const [hideValues, setHideValues] = useState(false);
 
   // Sorting state
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
@@ -46,8 +50,20 @@ export default function Dashboard() {
     }
   };
 
+  const fetchPerformance = async () => {
+    try {
+      const res = await fetch('/api/performance');
+      if (!res.ok) throw new Error('Failed to fetch performance');
+      const data = await res.json();
+      setPerformanceData(data.data || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     fetchPortfolio();
+    fetchPerformance();
   }, []);
 
   const toggleRow = (symbol: string) => {
@@ -226,7 +242,10 @@ export default function Dashboard() {
           </h1>
           <p className="text-fintech-muted mt-2">Real-time insights and analytics.</p>
         </div>
-        <div className="flex gap-4">
+        <div className="flex gap-4 items-center">
+          <div className="mr-2">
+            <UserButton appearance={{ elements: { userButtonAvatarBox: "w-10 h-10 border border-fintech-border shadow-[0_0_15px_rgba(59,130,246,0.3)]" } }} />
+          </div>
           <button
             onClick={() => setShowHateful8(!showHateful8)}
             className={`px-4 py-2 rounded-full font-medium transition-all duration-300 border ${showHateful8
@@ -242,6 +261,13 @@ export default function Dashboard() {
             title="Refresh Data"
           >
             <RefreshCcw size={20} className={loading ? 'animate-spin text-fintech-accent' : ''} />
+          </button>
+          <button
+            onClick={() => setHideValues(!hideValues)}
+            className="p-2 rounded-full bg-fintech-card border border-fintech-border hover:bg-fintech-border transition-colors flex items-center justify-center text-fintech-text"
+            title={hideValues ? "Show Values" : "Hide Values"}
+          >
+            {hideValues ? <EyeOff size={20} className="text-fintech-accent" /> : <Eye size={20} />}
           </button>
           <button
             onClick={() => {
@@ -261,7 +287,7 @@ export default function Dashboard() {
           <div className="absolute inset-0 bg-gradient-to-br from-fintech-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
           <p className="text-fintech-muted font-medium mb-1 relative z-10">Total Value</p>
           <h2 className="text-3xl font-bold text-white relative z-10">
-            ${totalMarketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            {hideValues ? '****' : `$${totalMarketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           </h2>
         </div>
 
@@ -270,7 +296,7 @@ export default function Dashboard() {
           <p className="text-fintech-muted font-medium mb-1 relative z-10">Open Unrealized P/L</p>
           <div className="flex items-end gap-3 relative z-10">
             <h2 className={`text-3xl font-bold ${isProfit ? 'text-fintech-profit' : 'text-fintech-loss'}`}>
-              {isProfit ? '+' : ''}${totalUnrealizedPL.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {hideValues ? '****' : `${isProfit ? '+' : ''}$${totalUnrealizedPL.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             </h2>
             <div className={`flex items-center mb-1 text-sm font-semibold px-2 py-0.5 rounded-md ${isProfit ? 'bg-fintech-profit/20 text-fintech-profit' : 'bg-fintech-loss/20 text-fintech-loss'}`}>
               {isProfit ? <TrendingUp size={14} className="mr-1" /> : <TrendingDown size={14} className="mr-1" />}
@@ -342,12 +368,12 @@ export default function Dashboard() {
                               <div className="font-bold text-white">{h.symbol}</div>
                               <div className="text-xs text-fintech-muted opacity-80 mt-0.5">{h.name}</div>
                             </td>
-                            <td className="p-5 text-center font-medium px-8">{h.quantity}</td>
-                            <td className="p-5 text-right text-fintech-muted">${h.avgBuyPrice?.toFixed(2)}</td>
+                            <td className="p-5 text-center font-medium px-8">{hideValues ? '****' : h.quantity}</td>
+                            <td className="p-5 text-right text-fintech-muted">{hideValues ? '****' : `$${h.avgBuyPrice?.toFixed(2)}`}</td>
                             <td className="p-5 text-right font-medium">${h.currentPrice?.toFixed(2) || 'N/A'}</td>
                             <td className="p-5 text-right font-semibold text-white">
                               <div className="flex flex-col items-end">
-                                <span>${h.marketValue ? h.marketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}</span>
+                                <span>{hideValues ? '****' : `$${h.marketValue ? h.marketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}`}</span>
                                 <span className="text-sm font-medium text-fintech-accent mt-0.5 tracking-wide">
                                   {totalMarketValue > 0 && h.marketValue ? ((h.marketValue / totalMarketValue) * 100).toFixed(2) : '0.00'}%
                                 </span>
@@ -355,7 +381,7 @@ export default function Dashboard() {
                             </td>
                             <td className={`p-5 text-right font-bold ${isRowProfit ? 'text-fintech-profit' : 'text-fintech-loss'}`}>
                               <div className="flex flex-col items-end">
-                                <span>{isRowProfit ? '+' : ''}${h.unrealizedPL ? h.unrealizedPL.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}</span>
+                                <span>{hideValues ? '****' : `${isRowProfit ? '+' : ''}$${h.unrealizedPL ? h.unrealizedPL.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}`}</span>
                                 <span className="text-sm opacity-80">{isRowProfit ? '+' : ''}{(h.unrealizedPLPercent || 0).toFixed(2)}%</span>
                               </div>
                             </td>
@@ -500,10 +526,10 @@ export default function Dashboard() {
                                                 {t.type}
                                               </span>
                                             </td>
-                                            <td className="py-2 px-4 text-right text-slate-300">{t.quantity}</td>
-                                            <td className="py-2 px-4 text-right text-slate-400">${Number(t.price).toFixed(2)}</td>
+                                            <td className="py-2 px-4 text-right text-slate-300">{hideValues ? '****' : t.quantity}</td>
+                                            <td className="py-2 px-4 text-right text-slate-400">{hideValues ? '****' : `$${Number(t.price).toFixed(2)}`}</td>
                                             <td className="py-2 px-4 text-right text-slate-300 border-l border-slate-700/50 font-medium">
-                                              ${(t.quantity * t.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                              {hideValues ? '****' : `$${(t.quantity * t.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                                             </td>
                                             <td className="py-2 px-4 text-center">
                                               <button
@@ -545,6 +571,9 @@ export default function Dashboard() {
               </table>
             </div>
           </div>
+          
+          <PerformanceChart data={performanceData} hideValues={hideValues} />
+          
           <AllocationCharts holdings={sortedHoldings} />
 
           {/* Closed Positions Section */}
@@ -590,7 +619,7 @@ export default function Dashboard() {
                               </td>
                               <td className={`p-5 text-right font-bold text-lg tracking-wide ${isClosedProfit ? 'text-fintech-profit' : 'text-fintech-loss'}`}>
                                 <div className="flex flex-col items-end">
-                                  <span>{isClosedProfit ? '+' : ''}${Math.abs(h.realizedPL || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                  <span>{hideValues ? '****' : `${isClosedProfit ? '+' : ''}$${Math.abs(h.realizedPL || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</span>
                                   <span className="text-[10px] uppercase opacity-70 mt-0.5 text-fintech-muted">Final Yield</span>
                                 </div>
                               </td>

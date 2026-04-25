@@ -1,19 +1,41 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs/promises';
-import path from 'path';
+import { auth } from '@clerk/nextjs';
+import { prisma } from '@/lib/prisma';
 import YahooFinance from 'yahoo-finance2';
 
 const yahooFinance = new YahooFinance();
-const HOLDINGS_PATH = path.join(process.cwd(), 'data', 'holdings.json');
 
-// Helper to reliably read our holdings file
-async function getHoldings() {
+// Helper to reliably read holdings from database
+async function getHoldings(userId: string) {
   try {
-    const fileContents = await fs.readFile(HOLDINGS_PATH, 'utf8');
-    const data = JSON.parse(fileContents);
-    return data.holdings || [];
+    const dbTransactions = await prisma.transaction.findMany({
+      where: { userId },
+      orderBy: { date: 'asc' }
+    });
+
+    // Group transactions by symbol
+    const holdingsMap: Record<string, any> = {};
+    
+    dbTransactions.forEach(t => {
+      if (!holdingsMap[t.symbol]) {
+        holdingsMap[t.symbol] = {
+          symbol: t.symbol,
+          transactions: []
+        };
+      }
+      
+      holdingsMap[t.symbol].transactions.push({
+        id: t.id,
+        type: t.type,
+        date: t.date,
+        quantity: t.quantity,
+        price: t.avgBuyPrice
+      });
+    });
+
+    return Object.values(holdingsMap);
   } catch (error) {
-    console.error('Error reading holdings:', error);
+    console.error('Error reading from database:', error);
     return [];
   }
 }
@@ -21,7 +43,10 @@ async function getHoldings() {
 // GET: Fetch our holdings, compute aggregate values from transactions, and get real-time quotes
 export async function GET() {
   try {
-    const rawHoldings = await getHoldings();
+    const { userId } = auth();
+    if (!userId) return new NextResponse('Unauthorized', { status: 401 });
+
+    const rawHoldings = await getHoldings(userId);
     
     if (rawHoldings.length === 0) {
       return NextResponse.json({ holdings: [] });
@@ -50,7 +75,6 @@ export async function GET() {
           realizedPL += (saleProceeds - costOfSoldShares);
           
           totalQty -= qty;
-          // Floor the cost basis to 0 if quantity falls to or below 0 to avoid floating point anomalies
           totalCostBasis = totalQty <= 0 ? 0 : totalCostBasis - costOfSoldShares;
         }
       });
@@ -123,59 +147,46 @@ export async function GET() {
 // POST: Add new holding, add transaction, or delete transaction
 export async function POST(request: Request) {
   try {
+    const { userId } = auth();
+    if (!userId) return new NextResponse('Unauthorized', { status: 401 });
+
     const body = await request.json();
     const { action, symbol, type, quantity, price, date, transactionId } = body;
     
-    if (!symbol) {
-      return NextResponse.json({ error: 'Symbol is required' }, { status: 400 });
-    }
-
-    let holdings = await getHoldings();
-    const upperSymbol = symbol.toUpperCase();
-    
-    const existingIndex = holdings.findIndex((h: any) => h.symbol === upperSymbol);
-    
     if (action === 'deleteTransaction') {
-      if (existingIndex >= 0 && transactionId) {
-        holdings[existingIndex].transactions = holdings[existingIndex].transactions.filter((t: any) => t.id !== transactionId);
-      }
-    } else if (action === 'editTransaction') {
-      if (existingIndex >= 0 && transactionId) {
-        const tIndex = holdings[existingIndex].transactions.findIndex((t: any) => t.id === transactionId);
-        if (tIndex >= 0) {
-          holdings[existingIndex].transactions[tIndex] = {
-            ...holdings[existingIndex].transactions[tIndex],
-            type: type || holdings[existingIndex].transactions[tIndex].type,
-            date: date || holdings[existingIndex].transactions[tIndex].date,
-            quantity: Number(quantity),
-            price: Number(price)
-          };
-        }
-      }
-    } else {
-      // It's either 'addTransaction' or a fresh holding add
-      const newTransaction = {
-        id: Date.now().toString() + Math.random().toString().slice(2, 6),
-        type: type || 'BUY',
-        date: date || new Date().toISOString().split('T')[0],
-        quantity: Number(quantity),
-        price: Number(price)
-      };
-
-      if (existingIndex >= 0) {
-        if (!holdings[existingIndex].transactions) {
-          holdings[existingIndex].transactions = [];
-        }
-        holdings[existingIndex].transactions.push(newTransaction);
-      } else {
-        holdings.push({
-          symbol: upperSymbol,
-          transactions: [newTransaction]
+      if (transactionId) {
+        await prisma.transaction.deleteMany({
+          where: { id: transactionId, userId }
         });
       }
+    } else if (action === 'editTransaction') {
+      if (transactionId) {
+        await prisma.transaction.updateMany({
+          where: { id: transactionId, userId },
+          data: {
+            type: type || 'BUY',
+            quantity: Number(quantity),
+            avgBuyPrice: Number(price),
+            date: date
+          }
+        });
+      }
+    } else {
+      if (!symbol) {
+        return NextResponse.json({ error: 'Symbol is required' }, { status: 400 });
+      }
+      
+      await prisma.transaction.create({
+        data: {
+          userId,
+          symbol: symbol.toUpperCase(),
+          type: type || 'BUY',
+          quantity: Number(quantity),
+          avgBuyPrice: Number(price),
+          date: date || new Date().toISOString().split('T')[0]
+        }
+      });
     }
-
-    await fs.writeFile(HOLDINGS_PATH, JSON.stringify({ holdings }, null, 2), 'utf8');
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
