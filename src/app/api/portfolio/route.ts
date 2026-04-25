@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs';
 import { prisma } from '@/lib/prisma';
-import YahooFinance from 'yahoo-finance2';
+import { YahooFinance } from 'yahoo-finance2';
 
 const yahooFinance = new YahooFinance();
 
