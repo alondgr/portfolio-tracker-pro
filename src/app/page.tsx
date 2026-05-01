@@ -15,6 +15,7 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [showHateful8, setShowHateful8] = useState(false);
   const [hideValues, setHideValues] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
   // Sorting state
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
@@ -43,6 +44,7 @@ export default function Dashboard() {
       if (!res.ok) throw new Error('Failed to fetch data');
       const data = await res.json();
       setHoldings(data.holdings || []);
+      setLastUpdated(new Date().toLocaleTimeString());
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -56,6 +58,7 @@ export default function Dashboard() {
       if (!res.ok) throw new Error('Failed to fetch performance');
       const data = await res.json();
       setPerformanceData(data.data || []);
+      setLastUpdated(new Date().toLocaleTimeString());
     } catch (err) {
       console.error(err);
     }
@@ -241,6 +244,11 @@ export default function Dashboard() {
             Portfolio Tracker
           </h1>
           <p className="text-fintech-muted mt-2">Real-time insights and analytics.</p>
+          {lastUpdated && (
+            <p className="text-[10px] uppercase tracking-widest text-fintech-accent/60 mt-1 font-bold">
+              Last Updated: {lastUpdated}
+            </p>
+          )}
         </div>
         <div className="flex gap-4 items-center">
           <div className="mr-2">
