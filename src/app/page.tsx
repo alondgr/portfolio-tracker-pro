@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import AllocationCharts from '@/components/AllocationCharts';
 import PerformanceChart from '@/components/PerformanceChart';
-import { Plus, TrendingUp, TrendingDown, RefreshCw, AlertCircle, RefreshCcw, ArrowUpDown, ChevronUp, ChevronDown, Trash2, Edit2, Eye, EyeOff, Search, Building2 } from 'lucide-react';
+import { Plus, TrendingUp, TrendingDown, RefreshCw, AlertCircle, RefreshCcw, ArrowUpDown, ChevronUp, ChevronDown, Trash2, Edit2, Eye, EyeOff, Search, Building2, Coins } from 'lucide-react';
 import { UserButton } from '@clerk/nextjs';
 
 const HATEFUL_8 = ['NVDA', 'PLTR', 'COIN', 'CRCL', 'GOLD', 'OXY', 'B', 'NEE', 'IRM'];
@@ -30,6 +30,15 @@ export default function Dashboard() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedCurrency, setSelectedCurrency] = useState('USD');
+  const [rates, setRates] = useState<Record<string, number>>({ USD: 1 });
+
+  const currencySymbols: Record<string, string> = {
+    USD: '$',
+    ILS: '₪',
+    EUR: '€',
+    GBP: '£'
+  };
 
   // Inline Transaction Form state
   const [txnFormActiveSymbol, setTxnFormActiveSymbol] = useState<string | null>(null);
@@ -67,9 +76,20 @@ export default function Dashboard() {
     }
   };
 
+  const fetchRates = async () => {
+    try {
+      const res = await fetch('/api/exchange-rates');
+      const data = await res.json();
+      if (data.rates) setRates(data.rates);
+    } catch (err) {
+      console.error('Error fetching rates:', err);
+    }
+  };
+
   useEffect(() => {
     fetchPortfolio();
     fetchPerformance();
+    fetchRates();
   }, []);
 
   useEffect(() => {
@@ -150,6 +170,23 @@ export default function Dashboard() {
     setFormData(prev => ({ ...prev, symbol: suggestion.symbol }));
     setShowDropdown(false);
     fetchCurrentPrice(suggestion.symbol);
+  };
+
+  const convertValue = (value: number, fromCurrency: string = 'USD') => {
+    // Standardize currency name (Yahoo sometimes returns uppercase or lowercase)
+    const from = fromCurrency.toUpperCase();
+    const to = selectedCurrency.toUpperCase();
+    
+    if (from === to) return value;
+    
+    // value is in 'from', convert to USD first
+    const usdValue = from === 'USD' ? value : value / (rates[from] || 1);
+    // convert USD to 'to'
+    return to === 'USD' ? usdValue : usdValue * (rates[to] || 1);
+  };
+
+  const formatCurrency = (value: number) => {
+    return `${currencySymbols[selectedCurrency] || '$'}${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const handleEditTransactionSubmit = async (e: React.FormEvent, symbol: string) => {
@@ -254,12 +291,12 @@ export default function Dashboard() {
     return 0;
   });
 
-  // Calculate totals
-  const totalMarketValue = filteredHoldings.reduce((sum, h) => sum + (h.marketValue || 0), 0);
-  const totalCostBasis = filteredHoldings.reduce((sum, h) => sum + (h.avgBuyPrice * h.quantity), 0);
+  // Calculate totals (converting everything to selected currency)
+  const totalMarketValue = filteredHoldings.reduce((sum, h) => sum + convertValue(h.marketValue || 0, h.currency), 0);
+  const totalCostBasis = filteredHoldings.reduce((sum, h) => sum + convertValue(h.avgBuyPrice * h.quantity, h.currency), 0);
   // Realized P/L is extremely hard to calculate accurately without complex FIFO handling, so we rely on Unrealized against open cost basis.
   const totalUnrealizedPL = totalMarketValue - totalCostBasis;
-  const totalYieldSum = filteredHoldings.reduce((sum, h) => sum + ((h.yieldPct || 0) * (h.marketValue || 0)), 0);
+  const totalYieldSum = filteredHoldings.reduce((sum, h) => sum + ((h.yieldPct || 0) * convertValue(h.marketValue || 0, h.currency)), 0);
   const avgYield = totalMarketValue > 0 ? (totalYieldSum / totalMarketValue) : 0;
 
   const isProfit = totalUnrealizedPL >= 0;
@@ -302,6 +339,20 @@ export default function Dashboard() {
           )}
         </div>
         <div className="flex gap-4 items-center">
+          <div className="flex bg-fintech-card border border-fintech-border rounded-full p-1 shadow-inner mr-2">
+            {Object.keys(currencySymbols).map(curr => (
+              <button
+                key={curr}
+                onClick={() => setSelectedCurrency(curr)}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${selectedCurrency === curr
+                  ? 'bg-fintech-accent text-white shadow-lg'
+                  : 'text-fintech-muted hover:text-fintech-text'
+                  }`}
+              >
+                {curr}
+              </button>
+            ))}
+          </div>
           <div className="mr-2">
             <UserButton appearance={{ elements: { userButtonAvatarBox: "w-10 h-10 border border-fintech-border shadow-[0_0_15px_rgba(59,130,246,0.3)]" } }} />
           </div>
@@ -347,7 +398,7 @@ export default function Dashboard() {
           <div className="absolute inset-0 bg-gradient-to-br from-fintech-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
           <p className="text-fintech-muted font-medium mb-1 relative z-10">Total Value</p>
           <h2 className="text-3xl font-bold text-white relative z-10">
-            {hideValues ? '****' : `$${totalMarketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            {hideValues ? '****' : formatCurrency(totalMarketValue)}
           </h2>
         </div>
 
@@ -356,7 +407,7 @@ export default function Dashboard() {
           <p className="text-fintech-muted font-medium mb-1 relative z-10">Open Unrealized P/L</p>
           <div className="flex items-end gap-3 relative z-10">
             <h2 className={`text-3xl font-bold ${isProfit ? 'text-fintech-profit' : 'text-fintech-loss'}`}>
-              {hideValues ? '****' : `${isProfit ? '+' : ''}$${totalUnrealizedPL.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              {hideValues ? '****' : `${isProfit ? '+' : ''}${formatCurrency(totalUnrealizedPL)}`}
             </h2>
             <div className={`flex items-center mb-1 text-sm font-semibold px-2 py-0.5 rounded-md ${isProfit ? 'bg-fintech-profit/20 text-fintech-profit' : 'bg-fintech-loss/20 text-fintech-loss'}`}>
               {isProfit ? <TrendingUp size={14} className="mr-1" /> : <TrendingDown size={14} className="mr-1" />}
@@ -429,11 +480,11 @@ export default function Dashboard() {
                               <div className="text-xs text-fintech-muted opacity-80 mt-0.5">{h.name}</div>
                             </td>
                             <td className="p-5 text-center font-medium px-8">{hideValues ? '****' : h.quantity}</td>
-                            <td className="p-5 text-right text-fintech-muted">{hideValues ? '****' : `$${h.avgBuyPrice?.toFixed(2)}`}</td>
-                            <td className="p-5 text-right font-medium">${h.currentPrice?.toFixed(2) || 'N/A'}</td>
+                            <td className="p-5 text-right text-fintech-muted">{hideValues ? '****' : formatCurrency(convertValue(h.avgBuyPrice, h.currency))}</td>
+                            <td className="p-5 text-right font-medium">{formatCurrency(convertValue(h.currentPrice, h.currency))}</td>
                             <td className="p-5 text-right font-semibold text-white">
                               <div className="flex flex-col items-end">
-                                <span>{hideValues ? '****' : `$${h.marketValue ? h.marketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}`}</span>
+                                <span>{hideValues ? '****' : formatCurrency(convertValue(h.marketValue || 0, h.currency))}</span>
                                 <span className="text-sm font-medium text-fintech-accent mt-0.5 tracking-wide">
                                   {totalMarketValue > 0 && h.marketValue ? ((h.marketValue / totalMarketValue) * 100).toFixed(2) : '0.00'}%
                                 </span>
@@ -441,7 +492,7 @@ export default function Dashboard() {
                             </td>
                             <td className={`p-5 text-right font-bold ${isRowProfit ? 'text-fintech-profit' : 'text-fintech-loss'}`}>
                               <div className="flex flex-col items-end">
-                                <span>{hideValues ? '****' : `${isRowProfit ? '+' : ''}$${h.unrealizedPL ? h.unrealizedPL.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}`}</span>
+                                <span>{hideValues ? '****' : `${isRowProfit ? '+' : ''}${formatCurrency(convertValue(h.unrealizedPL || 0, h.currency))}`}</span>
                                 <span className="text-sm opacity-80">{isRowProfit ? '+' : ''}{(h.unrealizedPLPercent || 0).toFixed(2)}%</span>
                               </div>
                             </td>
@@ -587,9 +638,9 @@ export default function Dashboard() {
                                               </span>
                                             </td>
                                             <td className="py-2 px-4 text-right text-slate-300">{hideValues ? '****' : t.quantity}</td>
-                                            <td className="py-2 px-4 text-right text-slate-400">{hideValues ? '****' : `$${Number(t.price).toFixed(2)}`}</td>
+                                            <td className="py-2 px-4 text-right text-slate-400">{hideValues ? '****' : formatCurrency(convertValue(t.price, h.currency))}</td>
                                             <td className="py-2 px-4 text-right text-slate-300 border-l border-slate-700/50 font-medium">
-                                              {hideValues ? '****' : `$${(t.quantity * t.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                                              {hideValues ? '****' : formatCurrency(convertValue(t.quantity * t.price, h.currency))}
                                             </td>
                                             <td className="py-2 px-4 text-center">
                                               <button
@@ -632,7 +683,11 @@ export default function Dashboard() {
             </div>
           </div>
           
-          <PerformanceChart data={performanceData} hideValues={hideValues} />
+          <PerformanceChart 
+            data={performanceData.map(d => ({ ...d, value: convertValue(d.value, 'USD') }))} 
+            hideValues={hideValues} 
+            currencySymbol={currencySymbols[selectedCurrency] || '$'}
+          />
           
           <AllocationCharts holdings={sortedHoldings} />
 
@@ -679,7 +734,7 @@ export default function Dashboard() {
                               </td>
                               <td className={`p-5 text-right font-bold text-lg tracking-wide ${isClosedProfit ? 'text-fintech-profit' : 'text-fintech-loss'}`}>
                                 <div className="flex flex-col items-end">
-                                  <span>{hideValues ? '****' : `${isClosedProfit ? '+' : ''}$${Math.abs(h.realizedPL || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</span>
+                                  <span>{hideValues ? '****' : formatCurrency(convertValue(h.realizedPL || 0, h.currency))}</span>
                                   <span className="text-[10px] uppercase opacity-70 mt-0.5 text-fintech-muted">Final Yield</span>
                                 </div>
                               </td>
@@ -810,9 +865,9 @@ export default function Dashboard() {
                                                   </span>
                                                 </td>
                                                 <td className="py-2 px-4 text-right text-slate-300">{t.quantity}</td>
-                                                <td className="py-2 px-4 text-right text-slate-400">${Number(t.price).toFixed(2)}</td>
-                                                <td className="py-2 px-4 text-right text-slate-300 border-l border-slate-700/50 font-medium">
-                                                  ${(t.quantity * t.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                <td className="py-2 px-4 text-right text-slate-400">{hideValues ? '****' : formatCurrency(convertValue(t.price, h.currency))}</td>
+                                                <td className={`py-2 px-4 text-right border-l border-slate-700/50 font-medium ${t.type === 'BUY' ? 'text-fintech-loss' : 'text-fintech-profit'}`}>
+                                                  {hideValues ? '****' : `${t.type === 'BUY' ? '-' : '+'}${formatCurrency(convertValue(t.quantity * t.price, h.currency))}`}
                                                 </td>
                                                 <td className="py-2 px-4 text-center">
                                                   <button

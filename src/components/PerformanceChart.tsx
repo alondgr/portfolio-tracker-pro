@@ -11,7 +11,7 @@ import {
   ResponsiveContainer
 } from 'recharts';
 
-export default function PerformanceChart({ data, hideValues }: { data: any[], hideValues: boolean }) {
+export default function PerformanceChart({ data, hideValues, currencySymbol = '$' }: { data: any[], hideValues: boolean, currencySymbol?: string }) {
   if (!data || data.length === 0) return (
     <div className="bg-fintech-card border border-fintech-border rounded-2xl p-6 shadow-xl mb-8 h-80 flex items-center justify-center text-fintech-muted italic">
       No performance history available yet.
@@ -24,7 +24,7 @@ export default function PerformanceChart({ data, hideValues }: { data: any[], hi
         <div className="bg-fintech-card p-4 border border-fintech-border rounded-xl shadow-2xl backdrop-blur-md">
           <p className="text-fintech-muted text-xs mb-1 uppercase tracking-wider">{payload[0].payload.fullDate}</p>
           <p className="text-xl font-bold text-white">
-            {hideValues ? '****' : `$${payload[0].value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            {hideValues ? '****' : `${currencySymbol}${payload[0].value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           </p>
         </div>
       );
@@ -63,7 +63,7 @@ export default function PerformanceChart({ data, hideValues }: { data: any[], hi
               fontSize={10} 
               tickLine={false} 
               axisLine={false}
-              tickFormatter={(val) => hideValues ? '****' : `$${val.toLocaleString()}`}
+              tickFormatter={(val) => hideValues ? '****' : `${currencySymbol}${val.toLocaleString()}`}
               width={hideValues ? 40 : 80}
               dx={-10}
             />

@@ -128,6 +128,7 @@ export async function GET() {
         ...holding,
         name,
         currentPrice,
+        currency: q?.currency || 'USD',
         marketValue,
         unrealizedPL,
         unrealizedPLPercent,
