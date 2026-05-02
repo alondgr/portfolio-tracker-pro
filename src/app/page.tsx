@@ -5,7 +5,7 @@ import AllocationCharts from '@/components/AllocationCharts';
 import PerformanceChart from '@/components/PerformanceChart';
 import TickerTape from '@/components/TickerTape';
 import { Plus, TrendingUp, TrendingDown, RefreshCw, AlertCircle, RefreshCcw, ArrowUpDown, ChevronUp, ChevronDown, Trash2, Edit2, Eye, EyeOff, Search, Building2, Coins } from 'lucide-react';
-import { useUser, SignUpButton } from '@clerk/nextjs';
+import { useUser, SignUpButton, UserButton } from '@clerk/nextjs';
 import { useConversionTimer } from '@/hooks/useConversionTimer';
 import { Info, X } from 'lucide-react';
 
