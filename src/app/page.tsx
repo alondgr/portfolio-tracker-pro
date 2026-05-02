@@ -106,8 +106,9 @@ export default function Dashboard() {
           const quoteRes = await fetch(`/api/market-data?symbols=${symbols}`);
           if (quoteRes.ok) {
             const marketData = await quoteRes.json();
+            const quotes = Array.isArray(marketData) ? marketData : (marketData.results || []);
             const updated = localHoldings.map((h: any) => {
-              const quote = marketData.find((m: any) => m.symbol === h.symbol);
+              const quote = quotes.find((m: any) => m.symbol === h.symbol);
               if (quote) {
                 const currentPrice = quote.price;
                 const marketValue = h.quantity * currentPrice;
