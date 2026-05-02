@@ -333,6 +333,10 @@ export default function Dashboard() {
       if (symbol === 'BTC-USD') symbol = 'BTC';
       if (symbol === 'ETH-USD') symbol = 'ETH';
       if (symbol === 'GC=F') symbol = 'GOLD';
+      if (symbol === 'SI=F') symbol = 'SILVER';
+      if (symbol === 'HG=F') symbol = 'COPPER';
+      if (symbol === 'CL=F') symbol = 'WTI OIL';
+      if (symbol === 'VNQ') symbol = 'VNQ';
       if (symbol === '^VIX') symbol = 'VIX';
       if (symbol === '^TNX') symbol = '10Y YIELD';
       if (symbol === 'DX-Y.NYB') symbol = 'DXY';

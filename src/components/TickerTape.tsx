@@ -21,6 +21,10 @@ const DESCRIPTIONS: Record<string, string> = {
   'GOLD': "Gold is a precious metal that has served as a store of value for centuries. In finance, it is often seen as a 'safe-haven' asset and a hedge against inflation and currency devaluation.",
   'BTC': "Bitcoin is the world's first decentralized digital currency. It operates on a peer-to-peer network (blockchain) without a central bank or single administrator.",
   'ETH': "Ethereum is a decentralized, open-source blockchain with smart contract functionality. Ether (ETH) is the native cryptocurrency of the platform, second only to Bitcoin in market cap.",
+  'WTI OIL': "West Texas Intermediate (WTI) is a grade of crude oil used as a benchmark in oil pricing. It is the underlying commodity of the New York Mercantile Exchange's oil futures contracts.",
+  'VNQ': "The Vanguard Real Estate ETF (VNQ) invests in stocks issued by real estate investment trusts (REITs), companies that purchase office buildings, hotels, and other real property.",
+  'SILVER': "Silver is a precious metal used in investment (as a store of value) and industry (in electronics and solar panels). It is often seen as a more volatile 'leveraged' play on gold.",
+  'COPPER': "Copper is a major industrial metal used in construction, electronics, and power generation. It is often called 'Dr. Copper' because its price is seen as a key indicator of global economic health.",
 };
 
 export default function TickerTape({ items }: { items: TickerItem[] }) {

@@ -19,6 +19,10 @@ export async function GET() {
       'BTC-USD', 
       'ETH-USD', 
       'GC=F',   // Gold
+      'SI=F',   // Silver
+      'HG=F',   // Copper
+      'CL=F',   // WTI Crude Oil
+      'VNQ',    // Real Estate
       '^VIX',   // VIX
       '^TNX',   // 10Y Yield
       'DX-Y.NYB' // DXY
