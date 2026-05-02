@@ -735,27 +735,27 @@ export default function Dashboard() {
               <table className="w-full text-left border-collapse min-w-[1000px]">
                 <thead>
                   <tr className="bg-fintech-bg/50 border-b border-fintech-border text-fintech-muted text-sm uppercase tracking-wider">
-                    <th className="p-5 font-semibold w-12 text-center">#</th>
+                    <th className="p-5 font-semibold w-12 text-center hidden md:table-cell">#</th>
                     <SortableHeader label="Symbol" sortKey="symbol" />
                     <SortableHeader label="Shares" sortKey="quantity" alignCenter />
                     <SortableHeader label="Avg Price" sortKey="avgBuyPrice" alignRight />
                     <SortableHeader label="Current Price" sortKey="currentPrice" alignRight />
                     <SortableHeader label="Market Value" sortKey="marketValue" alignRight />
                     <SortableHeader label="Unrealized P/L" sortKey="unrealizedPL" alignRight />
-                    <SortableHeader label="Div Yield" sortKey="yieldPct" alignRight />
-                    <SortableHeader label="Sector" sortKey="sector" />
+                    <SortableHeader label="Div Yield" sortKey="yieldPct" alignRight className="hidden md:table-cell" />
+                    <SortableHeader label="Sector" sortKey="sector" className="hidden md:table-cell" />
                     <SortableHeader label="Industry" sortKey="industry" />
                     <th className="p-5 font-semibold text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-fintech-border">
-                  {sortedHoldings.length === 0 ? (
-                    <tr>
-                      <td colSpan={11} className="p-8 text-center text-fintech-muted">
-                        No holdings found. Click &quot;New Stock&quot; to start tracking.
-                      </td>
-                    </tr>
-                  ) : (
+                    {sortedHoldings.length === 0 ? (
+                      <tr>
+                        <td colSpan={11} className="p-8 text-center text-fintech-muted">
+                          No holdings found. Click &quot;New Stock&quot; to start tracking.
+                        </td>
+                      </tr>
+                    ) : (
                     sortedHoldings.map((h, i) => {
                       const isRowProfit = h.unrealizedPL >= 0;
                       const isExpanded = expandedRows[h.symbol] || false;
@@ -767,7 +767,7 @@ export default function Dashboard() {
                             className={`hover:bg-fintech-bg/30 transition-colors group/row cursor-pointer ${isExpanded ? 'bg-fintech-bg/10' : ''}`}
                             onClick={() => toggleRow(h.symbol)}
                           >
-                            <td className="p-5 text-center text-fintech-muted font-medium w-12">{i + 1}</td>
+                            <td className="p-5 text-center text-fintech-muted font-medium w-12 hidden md:table-cell">{i + 1}</td>
                             <td className="p-5">
                               <div className="font-bold text-white">{h.symbol}</div>
                               <div className="text-xs text-fintech-muted opacity-80 mt-0.5">{h.name}</div>
@@ -789,8 +789,8 @@ export default function Dashboard() {
                                 <span className="text-sm opacity-80">{isRowProfit ? '+' : ''}{(h.unrealizedPLPercent || 0).toFixed(2)}%</span>
                               </div>
                             </td>
-                            <td className="p-5 text-right text-fintech-muted">{(h.yieldPct || 0).toFixed(2)}%</td>
-                            <td className="p-5 text-sm text-fintech-muted truncate max-w-[130px]" title={h.sector}>{h.sector || 'Unknown'}</td>
+                            <td className="p-5 text-right text-fintech-muted hidden md:table-cell">{(h.yieldPct || 0).toFixed(2)}%</td>
+                            <td className="p-5 text-sm text-fintech-muted truncate max-w-[130px] hidden md:table-cell" title={h.sector}>{h.sector || 'Unknown'}</td>
                             <td className="p-5 text-sm text-fintech-muted truncate max-w-[130px]" title={h.industry}>{h.industry || 'Unknown'}</td>
                             <td className="p-5 text-center text-fintech-muted">
                               <button className="p-2 rounded-full hover:bg-fintech-border transition-colors">
