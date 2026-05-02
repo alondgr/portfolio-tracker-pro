@@ -577,10 +577,10 @@ export default function Dashboard() {
     }))
   ];
 
-  const SortableHeader = ({ label, sortKey, alignRight = false, alignCenter = false }: { label: string, sortKey: string, alignRight?: boolean, alignCenter?: boolean }) => {
+  const SortableHeader = ({ label, sortKey, alignRight = false, alignCenter = false, className = "" }: { label: string, sortKey: string, alignRight?: boolean, alignCenter?: boolean, className?: string }) => {
     return (
       <th
-        className={`p-5 font-semibold cursor-pointer select-none group hover:text-white transition-colors ${alignRight ? 'text-right' : alignCenter ? 'text-center' : ''}`}
+        className={`p-5 font-semibold cursor-pointer select-none group hover:text-white transition-colors ${alignRight ? 'text-right' : alignCenter ? 'text-center' : ''} ${className}`}
         onClick={() => requestSort(sortKey)}
       >
         <div className={`flex items-center gap-1 ${alignRight ? 'justify-end' : alignCenter ? 'justify-center' : ''}`}>
