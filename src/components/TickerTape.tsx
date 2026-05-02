@@ -43,6 +43,12 @@ export default function TickerTape({ items }: { items: TickerItem[] }) {
     }
   };
 
+  const closeModal = () => {
+    setSelectedItem(null);
+    setIsManualPaused(false);
+  };
+
+
   return (
     <>
       <div className="fixed bottom-0 left-0 w-full bg-black border-t border-fintech-border h-10 flex items-center overflow-hidden z-[100] select-none shadow-[0_-5px_20px_rgba(0,0,0,0.5)]">
@@ -114,7 +120,7 @@ export default function TickerTape({ items }: { items: TickerItem[] }) {
                 </div>
               </div>
               <button 
-                onClick={() => setSelectedItem(null)}
+                onClick={closeModal}
                 className="p-2 rounded-full bg-slate-800 text-slate-400 hover:text-white transition-colors"
               >
                 <X size={20} />
@@ -126,14 +132,14 @@ export default function TickerTape({ items }: { items: TickerItem[] }) {
             </p>
             
             <button 
-              onClick={() => setSelectedItem(null)}
+              onClick={closeModal}
               className="w-full mt-6 py-3 bg-fintech-accent text-white font-bold rounded-2xl hover:bg-blue-600 transition-all shadow-lg"
             >
               Got it
             </button>
           </div>
           {/* Overlay click to close */}
-          <div className="absolute inset-0 -z-10" onClick={() => setSelectedItem(null)}></div>
+          <div className="absolute inset-0 -z-10" onClick={closeModal}></div>
         </div>
       )}
     </>

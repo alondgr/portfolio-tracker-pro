@@ -11,13 +11,13 @@ export function useConversionTimer() {
       const startTime = parseInt(savedStartTime, 10);
       const currentTime = Date.now();
       const elapsed = currentTime - startTime;
-      const twoMinutes = 120000;
+      const threeMinutes = 180000;
 
-      if (elapsed >= twoMinutes) {
+      if (elapsed >= threeMinutes) {
         setShowSignupPrompt(true);
       } else {
         setTimerStarted(true);
-        const remaining = twoMinutes - elapsed;
+        const remaining = threeMinutes - elapsed;
         const timeout = setTimeout(() => {
           setShowSignupPrompt(true);
         }, remaining);
@@ -35,7 +35,7 @@ export function useConversionTimer() {
     
     setTimeout(() => {
       setShowSignupPrompt(true);
-    }, 120000); // 2 minutes
+    }, 180000); // 3 minutes
   };
 
   const resetTimer = () => {
