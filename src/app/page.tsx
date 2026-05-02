@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import AllocationCharts from '@/components/AllocationCharts';
 import PerformanceChart from '@/components/PerformanceChart';
+import TickerTape from '@/components/TickerTape';
 import { Plus, TrendingUp, TrendingDown, RefreshCw, AlertCircle, RefreshCcw, ArrowUpDown, ChevronUp, ChevronDown, Trash2, Edit2, Eye, EyeOff, Search, Building2, Coins } from 'lucide-react';
 import { UserButton } from '@clerk/nextjs';
 
@@ -11,6 +12,7 @@ const HATEFUL_8 = ['NVDA', 'PLTR', 'COIN', 'CRCL', 'GOLD', 'OXY', 'B', 'NEE', 'I
 export default function Dashboard() {
   const [holdings, setHoldings] = useState<any[]>([]);
   const [performanceData, setPerformanceData] = useState<any[]>([]);
+  const [marketData, setMarketData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showHateful8, setShowHateful8] = useState(false);
@@ -86,10 +88,21 @@ export default function Dashboard() {
     }
   };
 
+  const fetchMarketData = async () => {
+    try {
+      const res = await fetch('/api/market-data');
+      const data = await res.json();
+      if (data.results) setMarketData(data.results);
+    } catch (err) {
+      console.error('Error fetching market data:', err);
+    }
+  };
+
   useEffect(() => {
     fetchPortfolio();
     fetchPerformance();
     fetchRates();
+    fetchMarketData();
   }, []);
 
   useEffect(() => {
@@ -300,6 +313,35 @@ export default function Dashboard() {
   const avgYield = totalMarketValue > 0 ? (totalYieldSum / totalMarketValue) : 0;
 
   const isProfit = totalUnrealizedPL >= 0;
+
+  const tickerItems = [
+    ...marketData.map(m => {
+      let symbol = m.symbol;
+      if (symbol === '^GSPC') symbol = 'S&P 500';
+      if (symbol === '^IXIC') symbol = 'NASDAQ';
+      if (symbol === '^DJI') symbol = 'DOW J';
+      if (symbol === 'BTC-USD') symbol = 'BTC';
+      if (symbol === 'ETH-USD') symbol = 'ETH';
+      if (symbol === 'GC=F') symbol = 'GOLD';
+      if (symbol === '^VIX') symbol = 'VIX';
+      if (symbol === '^TNX') symbol = '10Y YIELD';
+      if (symbol === 'DX-Y.NYB') symbol = 'DXY';
+      
+      const isYieldOrVix = symbol === 'VIX' || symbol === '10Y YIELD';
+      
+      return {
+        symbol,
+        price: isYieldOrVix ? m.price.toFixed(2) : formatCurrency(convertValue(m.price)),
+        change: m.change.toFixed(2) + '%',
+      };
+    }),
+    ...holdings.filter(h => HATEFUL_8.includes(h.symbol)).map(h => ({
+      symbol: h.symbol,
+      price: formatCurrency(convertValue(h.currentPrice, h.currency)),
+      change: (h.unrealizedPLPercent || 0).toFixed(2) + '%',
+      isCustom: true
+    }))
+  ];
 
   const SortableHeader = ({ label, sortKey, alignRight = false, alignCenter = false }: { label: string, sortKey: string, alignRight?: boolean, alignCenter?: boolean }) => {
     return (
@@ -1021,6 +1063,8 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+      {/* News Ticker */}
+      <TickerTape items={tickerItems} />
     </div>
   );
 }
