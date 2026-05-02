@@ -31,12 +31,27 @@ export async function GET(request: Request) {
 
     const quotes = await yahooFinance.quote(symbols);
     
-    const results = (Array.isArray(quotes) ? quotes : [quotes]).map((q: any) => ({
+    let results = (Array.isArray(quotes) ? quotes : [quotes]).map((q: any) => ({
       symbol: q.symbol,
       price: q.regularMarketPrice || q.postMarketPrice || 0,
       change: q.regularMarketChangePercent || 0,
       name: q.shortName || q.symbol
     }));
+
+    if (querySymbols) {
+      results = await Promise.all(results.map(async (r: any) => {
+        let sector = "Unknown";
+        let industry = "Unknown";
+        try {
+          const summary = (await yahooFinance.quoteSummary(r.symbol, { modules: ['assetProfile'] })) as any;
+          sector = summary.assetProfile?.sector || "Unknown";
+          industry = summary.assetProfile?.industry || "Unknown";
+        } catch (e) {
+          // ignore error if profile not found
+        }
+        return { ...r, sector, industry };
+      }));
+    }
 
     return NextResponse.json({ results });
   } catch (error: any) {

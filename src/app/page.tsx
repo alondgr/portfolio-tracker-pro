@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import AllocationCharts from '@/components/AllocationCharts';
 import PerformanceChart from '@/components/PerformanceChart';
 import TickerTape from '@/components/TickerTape';
+import WisdomQuote from '@/components/WisdomQuote';
 import { Plus, TrendingUp, TrendingDown, RefreshCw, AlertCircle, RefreshCcw, ArrowUpDown, ChevronUp, ChevronDown, Trash2, Edit2, Eye, EyeOff, Search, Building2, Coins } from 'lucide-react';
 import { useUser, SignUpButton, UserButton } from '@clerk/nextjs';
 import { useConversionTimer } from '@/hooks/useConversionTimer';
@@ -121,6 +122,8 @@ export default function Dashboard() {
                   unrealizedPL,
                   unrealizedPLPct,
                   currency: quote.currency || 'USD',
+                  sector: quote.sector || "Unknown",
+                  industry: quote.industry || "Unknown",
                   transactions: h.transactions || []
                 };
               }
@@ -599,7 +602,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-fintech-bg text-fintech-text p-4 md:p-10 pb-24 overflow-x-hidden max-w-full selection:bg-fintech-accent selection:text-white">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-10 gap-6">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-6">
         <div>
           <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-fintech-accent to-emerald-400">
             Portfolio Tracker
@@ -676,6 +679,10 @@ export default function Dashboard() {
             <Plus size={18} /> New Stock
           </button>
         </div>
+      </div>
+
+      <div className="mb-10">
+        <WisdomQuote />
       </div>
 
       {/* Summary Cards */}
