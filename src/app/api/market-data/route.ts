@@ -6,8 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const { userId } = auth();
-    if (!userId) return new NextResponse('Unauthorized', { status: 401 });
+    // Public API - allowed for Ghost users
 
     const yahooFinance = new (yf.YahooFinance || yf)();
     

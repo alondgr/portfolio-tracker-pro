@@ -9,7 +9,8 @@ export default authMiddleware({
     '/api/market-data', 
     '/api/exchange-rates',
     '/api/portfolio',
-    '/api/performance'
+    '/api/performance',
+    '/api/search'
   ]
 });
 

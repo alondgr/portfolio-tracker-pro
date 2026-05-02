@@ -11,8 +11,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const { userId } = auth();
-    if (!userId) return new NextResponse('Unauthorized', { status: 401 });
+    // Public API - allowed for Ghost users
 
     const yahooFinance = new (yf.YahooFinance || yf)();
     const result = await yahooFinance.search(query);

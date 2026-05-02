@@ -284,6 +284,10 @@ export default function Dashboard() {
     setShowDropdown(true);
     try {
       const res = await fetch(`/api/search?q=${query}`);
+      if (!res.ok) {
+        setSearchResults([]);
+        return;
+      }
       const data = await res.json();
       setSearchResults(data.result || []);
     } catch (err) {
@@ -325,6 +329,7 @@ export default function Dashboard() {
   };
 
   const formatCurrency = (value: number) => {
+    if (value === undefined || value === null) return '---';
     return `${currencySymbols[selectedCurrency] || '$'}${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
