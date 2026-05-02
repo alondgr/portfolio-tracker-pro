@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import AllocationCharts from '@/components/AllocationCharts';
 import PerformanceChart from '@/components/PerformanceChart';
-import { Plus, TrendingUp, TrendingDown, RefreshCw, AlertCircle, RefreshCcw, ArrowUpDown, ChevronUp, ChevronDown, Trash2, Edit2, Eye, EyeOff } from 'lucide-react';
+import { Plus, TrendingUp, TrendingDown, RefreshCw, AlertCircle, RefreshCcw, ArrowUpDown, ChevronUp, ChevronDown, Trash2, Edit2, Eye, EyeOff, Search, Building2 } from 'lucide-react';
 import { UserButton } from '@clerk/nextjs';
 
 const HATEFUL_8 = ['NVDA', 'PLTR', 'COIN', 'CRCL', 'GOLD', 'OXY', 'B', 'NEE', 'IRM'];
@@ -25,8 +25,11 @@ export default function Dashboard() {
 
   // Main Modal state (for fresh additions only now)
   const [showModal, setShowModal] = useState(false);
-  const [formData, setFormData] = useState({ symbol: '', quantity: '', avgBuyPrice: '', date: new Date().toISOString().split('T')[0] });
+  const [formData, setFormData] = useState({ symbol: '', quantity: '1', avgBuyPrice: '', date: new Date().toISOString().split('T')[0] });
   const [submitLoading, setSubmitLoading] = useState(false);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
 
   // Inline Transaction Form state
   const [txnFormActiveSymbol, setTxnFormActiveSymbol] = useState<string | null>(null);
@@ -69,6 +72,17 @@ export default function Dashboard() {
     fetchPerformance();
   }, []);
 
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.symbol-search-container')) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const toggleRow = (symbol: string) => {
     setExpandedRows(prev => ({ ...prev, [symbol]: !prev[symbol] }));
   };
@@ -93,12 +107,49 @@ export default function Dashboard() {
       if (!res.ok) throw new Error('Failed to save holding');
       await fetchPortfolio();
       setShowModal(false);
-      setFormData({ symbol: '', quantity: '', avgBuyPrice: '', date: new Date().toISOString().split('T')[0] });
+      setFormData({ symbol: '', quantity: '1', avgBuyPrice: '', date: new Date().toISOString().split('T')[0] });
     } catch (err: any) {
       alert(err.message);
     } finally {
       setSubmitLoading(false);
     }
+  };
+
+  const handleSymbolSearch = async (query: string) => {
+    if (!query) {
+      setSearchResults([]);
+      setShowDropdown(false);
+      return;
+    }
+    setSearchLoading(true);
+    setShowDropdown(true);
+    try {
+      const res = await fetch(`/api/search?q=${query}`);
+      const data = await res.json();
+      setSearchResults(data.result || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const fetchCurrentPrice = async (symbol: string) => {
+    try {
+      const res = await fetch(`/api/price?symbol=${symbol}`);
+      const data = await res.json();
+      if (data.price) {
+        setFormData(prev => ({ ...prev, avgBuyPrice: data.price.toString() }));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const selectSymbol = (suggestion: any) => {
+    setFormData(prev => ({ ...prev, symbol: suggestion.symbol }));
+    setShowDropdown(false);
+    fetchCurrentPrice(suggestion.symbol);
   };
 
   const handleEditTransactionSubmit = async (e: React.FormEvent, symbol: string) => {
@@ -279,7 +330,8 @@ export default function Dashboard() {
           </button>
           <button
             onClick={() => {
-              setFormData({ symbol: '', quantity: '', avgBuyPrice: '', date: new Date().toISOString().split('T')[0] });
+              setFormData({ symbol: '', quantity: '1', avgBuyPrice: '', date: new Date().toISOString().split('T')[0] });
+              setSearchResults([]);
               setShowModal(true);
             }}
             className="flex items-center gap-2 px-4 py-2 bg-fintech-profit hover:bg-emerald-600 text-white rounded-full font-medium transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_20px_rgba(16,185,129,0.5)]"
@@ -813,15 +865,54 @@ export default function Dashboard() {
           <div className="bg-fintech-card border border-fintech-border w-full max-w-md rounded-2xl p-6 shadow-2xl transform transition-all">
             <h2 className="text-2xl font-bold text-white mb-6">Track New Stock</h2>
             <form onSubmit={handleAddFreshHolding} className="space-y-4">
-              <div>
+              <div className="relative symbol-search-container">
                 <label className="block text-sm font-medium text-fintech-muted mb-1">Symbol (e.g. MSFT)</label>
-                <input
-                  type="text" required
-                  value={formData.symbol}
-                  onChange={e => setFormData({ ...formData, symbol: e.target.value.toUpperCase() })}
-                  className="w-full bg-fintech-bg border border-fintech-border rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-fintech-accent transition-all uppercase"
-                  placeholder="MSFT"
-                />
+                <div className="relative">
+                  <input
+                    type="text" required
+                    value={formData.symbol}
+                    onChange={e => {
+                      const val = e.target.value.toUpperCase();
+                      setFormData({ ...formData, symbol: val });
+                      handleSymbolSearch(val);
+                    }}
+                    onFocus={() => formData.symbol && setShowDropdown(true)}
+                    className="w-full bg-fintech-bg border border-fintech-border rounded-xl px-4 py-3 pl-11 text-white focus:outline-none focus:ring-2 focus:ring-fintech-accent transition-all uppercase"
+                    placeholder="MSFT"
+                  />
+                  <Search className="absolute left-4 top-3.5 text-fintech-muted" size={18} />
+                </div>
+
+                {showDropdown && (searchResults.length > 0 || searchLoading) && (
+                  <div className="absolute w-full mt-2 bg-slate-900 border border-fintech-border rounded-xl shadow-2xl z-[60] max-h-60 overflow-y-auto overflow-x-hidden custom-scrollbar">
+                    {searchLoading ? (
+                      <div className="p-4 flex items-center justify-center gap-2 text-fintech-muted">
+                        <RefreshCw size={16} className="animate-spin text-fintech-accent" />
+                        <span className="text-sm">Searching...</span>
+                      </div>
+                    ) : (
+                      searchResults.map((s, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => selectSymbol(s)}
+                          className="w-full p-4 flex items-center gap-3 hover:bg-slate-800 transition-colors border-b border-slate-800 last:border-0 text-left"
+                        >
+                          <div className="w-10 h-10 rounded-lg bg-fintech-accent/10 flex items-center justify-center shrink-0">
+                            <Building2 size={20} className="text-fintech-accent" />
+                          </div>
+                          <div className="overflow-hidden">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-white">{s.symbol}</span>
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-700 text-slate-300 font-medium uppercase">{s.exchange}</span>
+                            </div>
+                            <div className="text-xs text-fintech-muted truncate">{s.name}</div>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-fintech-muted mb-1">Date</label>
