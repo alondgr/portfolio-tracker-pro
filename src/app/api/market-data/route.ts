@@ -4,14 +4,16 @@ import yf from 'yahoo-finance2';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     // Public API - allowed for Ghost users
+    const { searchParams } = new URL(request.url);
+    const querySymbols = searchParams.get('symbols');
 
     const yahooFinance = new (yf.YahooFinance || yf)();
     
-    // Global Indices and major assets
-    const symbols = [
+    // Global Indices and major assets OR requested user symbols
+    const symbols = querySymbols ? querySymbols.split(',') : [
       '^GSPC', // S&P 500
       '^IXIC', // NASDAQ
       '^DJI',  // Dow Jones
