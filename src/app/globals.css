@@ -41,7 +41,19 @@
 .animate-marquee {
   display: flex;
   width: max-content;
-  animation: marquee 40s linear infinite;
+  animation: marquee var(--marquee-duration, 40s) linear infinite;
+}
+
+/* Default (Mobile) Speed */
+:root {
+  --marquee-duration: 30s;
+}
+
+/* Tablet/Desktop Speed - Slow it down for better readability on wide screens */
+@media (min-width: 768px) {
+  :root {
+    --marquee-duration: 60s;
+  }
 }
 
 .animate-marquee:hover {
