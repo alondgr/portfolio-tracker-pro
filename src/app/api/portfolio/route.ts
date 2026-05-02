@@ -44,7 +44,7 @@ export async function GET() {
   const yahooFinance = new (yf.YahooFinance || yf)();
   try {
     const { userId } = auth();
-    if (!userId) return new NextResponse('Unauthorized', { status: 401 });
+    if (!userId) return NextResponse.json({ holdings: [] });
 
     const rawHoldings = await getHoldings(userId);
     

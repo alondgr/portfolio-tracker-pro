@@ -5,11 +5,15 @@ import AllocationCharts from '@/components/AllocationCharts';
 import PerformanceChart from '@/components/PerformanceChart';
 import TickerTape from '@/components/TickerTape';
 import { Plus, TrendingUp, TrendingDown, RefreshCw, AlertCircle, RefreshCcw, ArrowUpDown, ChevronUp, ChevronDown, Trash2, Edit2, Eye, EyeOff, Search, Building2, Coins } from 'lucide-react';
-import { UserButton } from '@clerk/nextjs';
+import { useUser, SignUpButton } from '@clerk/nextjs';
+import { useConversionTimer } from '@/hooks/useConversionTimer';
+import { Info, X } from 'lucide-react';
 
 const HATEFUL_8 = ['NVDA', 'PLTR', 'COIN', 'CRCL', 'GOLD', 'OXY', 'B', 'NEE', 'IRM'];
 
 export default function Dashboard() {
+  const { user, isLoaded } = useUser();
+  const { showSignupPrompt, startTimer } = useConversionTimer();
   const [holdings, setHoldings] = useState<any[]>([]);
   const [performanceData, setPerformanceData] = useState<any[]>([]);
   const [marketData, setMarketData] = useState<any[]>([]);
@@ -50,14 +54,85 @@ export default function Dashboard() {
   const [editingTxnId, setEditingTxnId] = useState<string | null>(null);
   const [editTxnForm, setEditTxnForm] = useState({ type: 'BUY', quantity: '', price: '', date: '' });
 
+  const migrateLocalData = async () => {
+    const localHoldings = JSON.parse(localStorage.getItem('ghost_holdings') || '[]');
+    if (localHoldings.length === 0) return;
+
+    for (const holding of localHoldings) {
+      try {
+        await fetch('/api/portfolio', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'addTransaction',
+            symbol: holding.symbol,
+            type: 'BUY',
+            quantity: holding.quantity.toString(),
+            avgBuyPrice: holding.avgBuyPrice.toString(),
+            date: new Date().toISOString().split('T')[0]
+          })
+        });
+      } catch (err) {
+        console.error('Failed to migrate holding:', holding.symbol, err);
+      }
+    }
+    localStorage.removeItem('ghost_holdings');
+    localStorage.removeItem('ghost_timer_start');
+    fetchPortfolio();
+  };
+
+  useEffect(() => {
+    if (user && isLoaded && localStorage.getItem('ghost_holdings')) {
+      migrateLocalData();
+    }
+  }, [user, isLoaded]);
+
   const fetchPortfolio = async () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch('/api/portfolio');
-      if (!res.ok) throw new Error('Failed to fetch data');
-      const data = await res.json();
-      setHoldings(data.holdings || []);
+      if (user) {
+        const res = await fetch('/api/portfolio');
+        if (!res.ok) throw new Error('Failed to fetch portfolio');
+        const data = await res.json();
+        setHoldings(data.holdings || []);
+      } else {
+        // Ghost Mode: Load from LocalStorage
+        const localHoldings = JSON.parse(localStorage.getItem('ghost_holdings') || '[]');
+        
+        // We still need real-time quotes for local holdings
+        if (localHoldings.length > 0) {
+          const symbols = localHoldings.map((h: any) => h.symbol).join(',');
+          const quoteRes = await fetch(`/api/market-data?symbols=${symbols}`);
+          if (quoteRes.ok) {
+            const marketData = await quoteRes.json();
+            const updated = localHoldings.map((h: any) => {
+              const quote = marketData.find((m: any) => m.symbol === h.symbol);
+              if (quote) {
+                const currentPrice = quote.price;
+                const marketValue = h.quantity * currentPrice;
+                const unrealizedPL = marketValue - (h.quantity * h.avgBuyPrice);
+                const unrealizedPLPct = ((currentPrice - h.avgBuyPrice) / h.avgBuyPrice) * 100;
+                return {
+                  ...h,
+                  currentPrice,
+                  marketValue,
+                  unrealizedPL,
+                  unrealizedPLPct,
+                  currency: quote.currency || 'USD',
+                  transactions: h.transactions || []
+                };
+              }
+              return h;
+            });
+            setHoldings(updated);
+          } else {
+            setHoldings(localHoldings);
+          }
+        } else {
+          setHoldings([]);
+        }
+      }
       setLastUpdated(new Date().toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }));
     } catch (err: any) {
       setError(err.message);
@@ -67,6 +142,10 @@ export default function Dashboard() {
   };
 
   const fetchPerformance = async (symbols?: string[]) => {
+    if (!user) {
+      setPerformanceData([]);
+      return;
+    }
     try {
       const url = symbols && symbols.length > 0 
         ? `/api/performance?symbols=${symbols.join(',')}` 
@@ -75,7 +154,6 @@ export default function Dashboard() {
       if (!res.ok) throw new Error('Failed to fetch performance');
       const data = await res.json();
       setPerformanceData(data.data || []);
-      setLastUpdated(new Date().toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }));
     } catch (err) {
       console.error(err);
     }
@@ -102,18 +180,20 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
+    if (!isLoaded) return;
     fetchPortfolio();
     fetchRates();
     fetchMarketData();
-  }, []);
+  }, [isLoaded, user]);
 
   useEffect(() => {
+    if (!isLoaded) return;
     if (showHateful8) {
       fetchPerformance(HATEFUL_8);
     } else {
       fetchPerformance();
     }
-  }, [showHateful8]);
+  }, [showHateful8, isLoaded, user]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -135,19 +215,55 @@ export default function Dashboard() {
     e.preventDefault();
     setSubmitLoading(true);
     try {
-      const res = await fetch('/api/portfolio', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'addTransaction',
-          symbol: formData.symbol,
-          type: 'BUY',
-          quantity: formData.quantity,
-          price: formData.avgBuyPrice,
-          date: formData.date
-        }),
-      });
-      if (!res.ok) throw new Error('Failed to save holding');
+      if (user) {
+        const res = await fetch('/api/portfolio', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'addTransaction',
+            symbol: formData.symbol,
+            type: 'BUY',
+            quantity: formData.quantity,
+            price: formData.avgBuyPrice,
+            date: formData.date
+          }),
+        });
+        if (!res.ok) throw new Error('Failed to save holding');
+      } else {
+        // Ghost Mode
+        const localHoldings = JSON.parse(localStorage.getItem('ghost_holdings') || '[]');
+        const existing = localHoldings.find((h: any) => h.symbol === formData.symbol.toUpperCase());
+        
+        if (existing) {
+          existing.quantity += Number(formData.quantity);
+          // Simple avg price calculation for ghost mode
+          existing.avgBuyPrice = ((existing.avgBuyPrice * (existing.quantity - Number(formData.quantity))) + (Number(formData.avgBuyPrice) * Number(formData.quantity))) / existing.quantity;
+          existing.transactions.push({
+            id: 'ghost-' + Date.now(),
+            type: 'BUY',
+            quantity: Number(formData.quantity),
+            price: Number(formData.avgBuyPrice),
+            date: formData.date
+          });
+        } else {
+          localHoldings.push({
+            symbol: formData.symbol.toUpperCase(),
+            quantity: Number(formData.quantity),
+            avgBuyPrice: Number(formData.avgBuyPrice),
+            date: formData.date,
+            transactions: [{
+              id: 'ghost-' + Date.now(),
+              type: 'BUY',
+              quantity: Number(formData.quantity),
+              price: Number(formData.avgBuyPrice),
+              date: formData.date
+            }]
+          });
+        }
+        localStorage.setItem('ghost_holdings', JSON.stringify(localHoldings));
+        startTimer(); // Start the conversion timer
+      }
+      
       await fetchPortfolio();
       setShowModal(false);
       setFormData({ symbol: '', quantity: '1', avgBuyPrice: '', date: new Date().toISOString().split('T')[0] });
@@ -216,17 +332,53 @@ export default function Dashboard() {
     e.preventDefault();
     setSubmitLoading(true);
     try {
-      const res = await fetch('/api/portfolio', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'editTransaction',
-          symbol,
-          transactionId: editingTxnId,
-          ...editTxnForm
-        }),
-      });
-      if (!res.ok) throw new Error('Failed to edit transaction');
+      if (user) {
+        const res = await fetch('/api/portfolio', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'editTransaction',
+            symbol,
+            transactionId: editingTxnId,
+            ...editTxnForm
+          }),
+        });
+        if (!res.ok) throw new Error('Failed to edit transaction');
+      } else {
+        // Ghost Mode
+        const localHoldings = JSON.parse(localStorage.getItem('ghost_holdings') || '[]');
+        const holding = localHoldings.find((h: any) => h.symbol === symbol);
+        if (holding) {
+          const txnIndex = holding.transactions.findIndex((t: any) => t.id === editingTxnId);
+          if (txnIndex !== -1) {
+            holding.transactions[txnIndex] = {
+              ...holding.transactions[txnIndex],
+              ...editTxnForm,
+              quantity: Number(editTxnForm.quantity),
+              price: Number(editTxnForm.price)
+            };
+            
+            // Recalculate total quantity and avg price
+            let totalQty = 0;
+            let totalCost = 0;
+            holding.transactions.forEach((t: any) => {
+              const q = Number(t.quantity);
+              const p = Number(t.price);
+              if (t.type === 'BUY') {
+                totalQty += q;
+                totalCost += q * p;
+              } else {
+                totalQty -= q;
+              }
+            });
+            holding.quantity = totalQty;
+            holding.avgBuyPrice = totalQty > 0 ? totalCost / totalQty : 0;
+            
+            localStorage.setItem('ghost_holdings', JSON.stringify(localHoldings));
+          }
+        }
+      }
+      
       await fetchPortfolio();
       setEditingTxnId(null);
     } catch (err: any) {
@@ -241,16 +393,42 @@ export default function Dashboard() {
     e.preventDefault();
     setSubmitLoading(true);
     try {
-      const res = await fetch('/api/portfolio', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'addTransaction',
-          symbol,
-          ...txnForm
-        }),
-      });
-      if (!res.ok) throw new Error('Failed to add transaction');
+      if (user) {
+        const res = await fetch('/api/portfolio', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'addTransaction',
+            symbol,
+            ...txnForm
+          }),
+        });
+        if (!res.ok) throw new Error('Failed to add transaction');
+      } else {
+        // Ghost Mode
+        const localHoldings = JSON.parse(localStorage.getItem('ghost_holdings') || '[]');
+        const holding = localHoldings.find((h: any) => h.symbol === symbol);
+        if (holding) {
+          const qty = Number(txnForm.quantity);
+          const price = Number(txnForm.price);
+          
+          if (txnForm.type === 'BUY') {
+            holding.avgBuyPrice = ((holding.avgBuyPrice * holding.quantity) + (price * qty)) / (holding.quantity + qty);
+            holding.quantity += qty;
+          } else {
+            holding.quantity -= qty;
+          }
+          
+          holding.transactions.push({
+            id: 'ghost-' + Date.now(),
+            ...txnForm,
+            quantity: qty,
+            price: price
+          });
+          localStorage.setItem('ghost_holdings', JSON.stringify(localHoldings));
+        }
+      }
+      
       await fetchPortfolio();
       setTxnForm({ type: 'BUY', quantity: '', price: '', date: new Date().toISOString().split('T')[0] });
       setTxnFormActiveSymbol(null);
@@ -264,12 +442,45 @@ export default function Dashboard() {
   const handleDeleteTransaction = async (symbol: string, transactionId: string) => {
     if (!confirm('Are you sure you want to delete this transaction?')) return;
     try {
-      const res = await fetch('/api/portfolio', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'deleteTransaction', symbol, transactionId }),
-      });
-      if (!res.ok) throw new Error('Failed to delete transaction');
+      if (user) {
+        const res = await fetch('/api/portfolio', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'deleteTransaction', symbol, transactionId }),
+        });
+        if (!res.ok) throw new Error('Failed to delete transaction');
+      } else {
+        // Ghost Mode
+        const localHoldings = JSON.parse(localStorage.getItem('ghost_holdings') || '[]');
+        const holding = localHoldings.find((h: any) => h.symbol === symbol);
+        if (holding) {
+          holding.transactions = holding.transactions.filter((t: any) => t.id !== transactionId);
+          
+          // Recalculate totals
+          let totalQty = 0;
+          let totalCost = 0;
+          holding.transactions.forEach((t: any) => {
+            const q = Number(t.quantity);
+            const p = Number(t.price);
+            if (t.type === 'BUY') {
+              totalQty += q;
+              totalCost += q * p;
+            } else {
+              totalQty -= q;
+            }
+          });
+          holding.quantity = totalQty;
+          holding.avgBuyPrice = totalQty > 0 ? totalCost / totalQty : 0;
+          
+          if (holding.transactions.length === 0) {
+            const index = localHoldings.indexOf(holding);
+            localHoldings.splice(index, 1);
+          }
+          
+          localStorage.setItem('ghost_holdings', JSON.stringify(localHoldings));
+        }
+      }
+      
       await fetchPortfolio();
     } catch (err: any) {
       alert(err.message);
@@ -411,7 +622,17 @@ export default function Dashboard() {
             ))}
           </div>
           <div className="order-2 sm:order-none">
-            <UserButton appearance={{ elements: { userButtonAvatarBox: "w-10 h-10 border border-fintech-border shadow-[0_0_15px_rgba(59,130,246,0.3)]" } }} />
+            {isLoaded && (
+              user ? (
+                <UserButton appearance={{ elements: { userButtonAvatarBox: "w-10 h-10 border border-fintech-border shadow-[0_0_15px_rgba(59,130,246,0.3)]" } }} />
+              ) : (
+                <SignUpButton mode="modal">
+                  <button className="px-4 py-2 bg-fintech-accent text-white rounded-full text-sm font-bold hover:bg-blue-600 transition-all shadow-lg">
+                    Sign Up
+                  </button>
+                </SignUpButton>
+              )
+            )}
           </div>
           <button
             onClick={() => setShowHateful8(!showHateful8)}
@@ -1082,6 +1303,41 @@ export default function Dashboard() {
       )}
       {/* News Ticker */}
       <TickerTape items={tickerItems} />
+      {/* Conversion Prompt Modal */}
+      {showSignupPrompt && !user && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="w-full max-w-lg bg-fintech-card border border-fintech-accent/30 rounded-[2.5rem] p-8 shadow-[0_0_50px_rgba(59,130,246,0.2)] relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-6">
+              <div className="w-20 h-20 bg-fintech-accent/10 rounded-full blur-3xl absolute -top-10 -right-10"></div>
+            </div>
+            
+            <div className="relative z-10 text-center">
+              <div className="w-20 h-20 bg-gradient-to-br from-fintech-accent to-emerald-400 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl transform -rotate-6">
+                <TrendingUp size={40} className="text-white" />
+              </div>
+              
+              <h2 className="text-3xl font-extrabold text-white mb-4 tracking-tight">
+                Secure Your Progress!
+              </h2>
+              
+              <p className="text-slate-300 text-lg leading-relaxed mb-8">
+                You've started building a great portfolio! Sign up now to securely store your data in the cloud and access your insights from any device.
+              </p>
+              
+              <div className="grid grid-cols-1 gap-4">
+                <SignUpButton mode="modal">
+                  <button className="w-full py-4 bg-fintech-accent hover:bg-blue-600 text-white font-bold rounded-2xl transition-all shadow-[0_10px_20px_rgba(59,130,246,0.3)] text-lg">
+                    Create My Free Account
+                  </button>
+                </SignUpButton>
+                <p className="text-slate-500 text-xs mt-2 italic">
+                  Don't worry, your local stocks will be automatically migrated to your new account.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

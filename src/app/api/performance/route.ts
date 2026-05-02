@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   const yahooFinance = new (yf.YahooFinance || yf)();
   try {
     const { userId } = auth();
-    if (!userId) return new NextResponse('Unauthorized', { status: 401 });
+    if (!userId) return NextResponse.json({ data: [] });
 
     const where: any = { userId };
     if (filterSymbols && filterSymbols.length > 0) {
