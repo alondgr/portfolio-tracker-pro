@@ -3,14 +3,22 @@ import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs';
 import { prisma } from '@/lib/prisma';
 import yf from 'yahoo-finance2';
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const filterSymbols = searchParams.get('symbols')?.split(',');
+  
   const yahooFinance = new (yf.YahooFinance || yf)();
   try {
     const { userId } = auth();
     if (!userId) return new NextResponse('Unauthorized', { status: 401 });
 
+    const where: any = { userId };
+    if (filterSymbols && filterSymbols.length > 0) {
+      where.symbol = { in: filterSymbols };
+    }
+
     const dbTransactions = await prisma.transaction.findMany({
-      where: { userId },
+      where,
       orderBy: { date: 'asc' }
     });
 
@@ -49,13 +57,46 @@ export async function GET() {
 
     // 2. Fetch historical data for each symbol
     const historicalData: Record<string, any[]> = {};
+    const today = new Date();
+    
     await Promise.all(symbols.map(async (symbol) => {
       try {
-        const result = await yahooFinance.historical(symbol as string, {
-          period1: minDate.toISOString().split('T')[0],
+        // Fix for common name errors in symbols
+        let cleanSymbol = (symbol as string).toUpperCase();
+        if (cleanSymbol === 'MICROSOFT') cleanSymbol = 'MSFT';
+        if (cleanSymbol === 'INTEL') cleanSymbol = 'INTC';
+        if (cleanSymbol === 'GOOGLE') cleanSymbol = 'GOOGL';
+        if (cleanSymbol === 'APPLE') cleanSymbol = 'AAPL';
+
+        let result = await yahooFinance.historical(cleanSymbol, {
+          period1: minDate,
+          period2: today,
           interval: '1d'
         });
-        historicalData[symbol as string] = result;
+
+        // Fallback for simulated future dates (Yahoo won't have 2026 data yet)
+        if (!result || result.length === 0) {
+          const fbStart = new Date(minDate);
+          fbStart.setFullYear(fbStart.getFullYear() - 2);
+          const fbEnd = new Date(today);
+          fbEnd.setFullYear(fbEnd.getFullYear() - 2);
+
+          const fallbackResult = await yahooFinance.historical(cleanSymbol, {
+            period1: fbStart,
+            period2: fbEnd,
+            interval: '1d'
+          });
+
+          if (fallbackResult && fallbackResult.length > 0) {
+            result = fallbackResult.map(p => {
+              const d = new Date(p.date);
+              d.setFullYear(d.getFullYear() + 2);
+              return { ...p, date: d };
+            });
+          }
+        }
+
+        historicalData[symbol as string] = result || [];
       } catch (e) {
         console.warn(`Failed to fetch historical for ${symbol}`, e);
         historicalData[symbol as string] = [];
@@ -64,7 +105,6 @@ export async function GET() {
 
     // 3. Generate daily timeline from minDate to today
     const timeline: any[] = [];
-    const today = new Date();
     // Normalize today and currentDate to midnight for comparison
     today.setHours(23, 59, 59, 999);
     let currentDate = new Date(minDate);

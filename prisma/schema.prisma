@@ -10,13 +10,13 @@ datasource db {
 
 model Transaction {
   id          String   @id @default(uuid())
-  userId      String   
+  userId      String
   symbol      String
   quantity    Float
-  type        String   @default("BUY")
   avgBuyPrice Float
   date        String
   createdAt   DateTime @default(now())
+  type        String   @default("BUY")
 
   @@index([userId])
   @@index([symbol])

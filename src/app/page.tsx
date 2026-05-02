@@ -66,9 +66,12 @@ export default function Dashboard() {
     }
   };
 
-  const fetchPerformance = async () => {
+  const fetchPerformance = async (symbols?: string[]) => {
     try {
-      const res = await fetch('/api/performance');
+      const url = symbols && symbols.length > 0 
+        ? `/api/performance?symbols=${symbols.join(',')}` 
+        : '/api/performance';
+      const res = await fetch(url);
       if (!res.ok) throw new Error('Failed to fetch performance');
       const data = await res.json();
       setPerformanceData(data.data || []);
@@ -100,10 +103,17 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchPortfolio();
-    fetchPerformance();
     fetchRates();
     fetchMarketData();
   }, []);
+
+  useEffect(() => {
+    if (showHateful8) {
+      fetchPerformance(HATEFUL_8);
+    } else {
+      fetchPerformance();
+    }
+  }, [showHateful8]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -372,6 +382,7 @@ export default function Dashboard() {
         <div>
           <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-fintech-accent to-emerald-400">
             Portfolio Tracker
+            {showHateful8 && <span className="ml-3 text-sm font-bold px-3 py-1 bg-amber-500/20 text-amber-500 rounded-full border border-amber-500/30 uppercase tracking-widest align-middle">Focus Mode: Hateful 8</span>}
           </h1>
           <p className="text-fintech-muted mt-2">Real-time insights and analytics.</p>
           {lastUpdated && (
