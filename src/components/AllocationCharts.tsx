@@ -120,18 +120,18 @@ export default function AllocationCharts({ holdings }: { holdings: any[] }) {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full mb-8">
-      <div className="bg-fintech-card border border-fintech-border rounded-2xl p-6 shadow-xl flex flex-col items-center">
+      <div className="bg-fintech-card border border-fintech-border rounded-2xl p-4 sm:p-6 shadow-xl flex flex-col items-center overflow-hidden">
         <h3 className="text-lg font-semibold text-fintech-text mb-4">Sector Allocation</h3>
         {sectorData.length > 0 ? (
-          <div className="w-full h-72">
+          <div className="w-full h-64 sm:h-72">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={sectorData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={80}
-                  outerRadius={105}
+                  innerRadius="60%"
+                  outerRadius="80%"
                   paddingAngle={5}
                   dataKey="value"
                   stroke="none"
@@ -156,18 +156,18 @@ export default function AllocationCharts({ holdings }: { holdings: any[] }) {
         )}
       </div>
 
-      <div className="bg-fintech-card border border-fintech-border rounded-2xl p-6 shadow-xl flex flex-col items-center">
+      <div className="bg-fintech-card border border-fintech-border rounded-2xl p-4 sm:p-6 shadow-xl flex flex-col items-center overflow-hidden">
         <h3 className="text-lg font-semibold text-fintech-text mb-4">Industry Allocation</h3>
         {industryData.length > 0 ? (
-          <div className="w-full h-72">
+          <div className="w-full h-64 sm:h-72">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={industryData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={80}
-                  outerRadius={105}
+                  innerRadius="60%"
+                  outerRadius="80%"
                   paddingAngle={5}
                   dataKey="value"
                   stroke="none"

@@ -376,9 +376,9 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen p-6 md:p-12 font-sans bg-fintech-bg text-fintech-text selection:bg-fintech-accent selection:text-white">
+    <div className="min-h-screen bg-fintech-bg text-fintech-text p-4 md:p-10 pb-24 overflow-x-hidden max-w-full selection:bg-fintech-accent selection:text-white">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-10 gap-6">
         <div>
           <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-fintech-accent to-emerald-400">
             Portfolio Tracker
@@ -391,8 +391,8 @@ export default function Dashboard() {
             </p>
           )}
         </div>
-        <div className="flex gap-4 items-center">
-          <div className="flex bg-fintech-card border border-fintech-border rounded-full p-1 shadow-inner mr-2">
+        <div className="flex flex-wrap gap-4 items-center w-full lg:w-auto">
+          <div className="flex bg-fintech-card border border-fintech-border rounded-full p-1 shadow-inner order-1 sm:order-none">
             {Object.keys(currencySymbols).map(curr => (
               <button
                 key={curr}
@@ -406,39 +406,41 @@ export default function Dashboard() {
               </button>
             ))}
           </div>
-          <div className="mr-2">
+          <div className="order-2 sm:order-none">
             <UserButton appearance={{ elements: { userButtonAvatarBox: "w-10 h-10 border border-fintech-border shadow-[0_0_15px_rgba(59,130,246,0.3)]" } }} />
           </div>
           <button
             onClick={() => setShowHateful8(!showHateful8)}
-            className={`px-4 py-2 rounded-full font-medium transition-all duration-300 border ${showHateful8
+            className={`flex-1 sm:flex-none px-4 py-2 rounded-full font-medium transition-all duration-300 border order-3 sm:order-none ${showHateful8
               ? 'bg-fintech-accent border-fintech-accent text-white shadow-[0_0_15px_rgba(59,130,246,0.5)]'
               : 'bg-fintech-card border-fintech-border text-fintech-text hover:bg-fintech-border'
               }`}
           >
             Hateful 8 View
           </button>
-          <button
-            onClick={fetchPortfolio}
-            className="p-2 rounded-full bg-fintech-card border border-fintech-border hover:bg-fintech-border transition-colors flex items-center justify-center text-fintech-text"
-            title="Refresh Data"
-          >
-            <RefreshCcw size={20} className={loading ? 'animate-spin text-fintech-accent' : ''} />
-          </button>
-          <button
-            onClick={() => setHideValues(!hideValues)}
-            className="p-2 rounded-full bg-fintech-card border border-fintech-border hover:bg-fintech-border transition-colors flex items-center justify-center text-fintech-text"
-            title={hideValues ? "Show Values" : "Hide Values"}
-          >
-            {hideValues ? <EyeOff size={20} className="text-fintech-accent" /> : <Eye size={20} />}
-          </button>
+          <div className="flex gap-2 order-4 sm:order-none">
+            <button
+              onClick={fetchPortfolio}
+              className="p-2 rounded-full bg-fintech-card border border-fintech-border hover:bg-fintech-border transition-colors flex items-center justify-center text-fintech-text"
+              title="Refresh Data"
+            >
+              <RefreshCcw size={20} className={loading ? 'animate-spin text-fintech-accent' : ''} />
+            </button>
+            <button
+              onClick={() => setHideValues(!hideValues)}
+              className="p-2 rounded-full bg-fintech-card border border-fintech-border hover:bg-fintech-border transition-colors flex items-center justify-center text-fintech-text"
+              title={hideValues ? "Show Values" : "Hide Values"}
+            >
+              {hideValues ? <EyeOff size={20} className="text-fintech-accent" /> : <Eye size={20} />}
+            </button>
+          </div>
           <button
             onClick={() => {
               setFormData({ symbol: '', quantity: '1', avgBuyPrice: '', date: new Date().toISOString().split('T')[0] });
               setSearchResults([]);
               setShowModal(true);
             }}
-            className="flex items-center gap-2 px-4 py-2 bg-fintech-profit hover:bg-emerald-600 text-white rounded-full font-medium transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_20px_rgba(16,185,129,0.5)]"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-fintech-profit hover:bg-emerald-600 text-white rounded-full font-bold transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_20px_rgba(16,185,129,0.5)] order-5 sm:order-none"
           >
             <Plus size={18} /> New Stock
           </button>
@@ -491,8 +493,8 @@ export default function Dashboard() {
         <>
           {/* Table */}
           <div className="bg-fintech-card border border-fintech-border rounded-2xl shadow-xl overflow-hidden mb-12">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+            <div className="overflow-x-auto no-scrollbar">
+              <table className="w-full text-left border-collapse min-w-[1000px]">
                 <thead>
                   <tr className="bg-fintech-bg/50 border-b border-fintech-border text-fintech-muted text-sm uppercase tracking-wider">
                     <th className="p-5 font-semibold w-12 text-center">#</th>

@@ -64,7 +64,7 @@ export default function PerformanceChart({ data, hideValues, currencySymbol = '$
               tickLine={false} 
               axisLine={false}
               tickFormatter={(val) => hideValues ? '****' : `${currencySymbol}${val.toLocaleString()}`}
-              width={hideValues ? 40 : 80}
+              width={hideValues ? 40 : (typeof window !== 'undefined' && window.innerWidth < 768 ? 50 : 80)}
               dx={-10}
             />
             <Tooltip content={<CustomTooltip />} />
