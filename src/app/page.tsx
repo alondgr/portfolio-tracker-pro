@@ -769,7 +769,7 @@ export default function Dashboard() {
                           >
                             <td className="p-5 text-center text-fintech-muted font-medium w-12 hidden md:table-cell">{i + 1}</td>
                             <td className="p-5">
-                              <div className={`font-bold ${isRowProfit ? 'text-emerald-400/80' : 'text-rose-400/80'}`}>{h.symbol}</div>
+                              <div className="font-bold" style={{ color: isRowProfit ? 'rgba(138, 255, 213, 0.8)' : 'rgba(243, 129, 129, 0.8)' }}>{h.symbol}</div>
                               <div className="text-xs text-fintech-muted opacity-80 mt-0.5">{h.name}</div>
                             </td>
                             <td className="p-5 text-center font-medium px-8">{hideValues ? '****' : h.quantity}</td>
