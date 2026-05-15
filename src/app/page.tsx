@@ -210,6 +210,12 @@ export default function Dashboard() {
             const updated = localWatchlist.map((w: any) => {
               const quote = quotes.find((m: any) => m.symbol === w.symbol);
               if (quote) {
+                let sinceAddedChange = 0;
+                let sinceAddedChangePct = 0;
+                if (w.addedPrice && quote.price > 0) {
+                  sinceAddedChange = quote.price - w.addedPrice;
+                  sinceAddedChangePct = (sinceAddedChange / w.addedPrice) * 100;
+                }
                 return {
                   ...w,
                   price: quote.price,
@@ -218,7 +224,9 @@ export default function Dashboard() {
                   name: quote.name,
                   currency: quote.currency,
                   sector: quote.sector || "Unknown",
-                  industry: quote.industry || "Unknown"
+                  industry: quote.industry || "Unknown",
+                  sinceAddedChange,
+                  sinceAddedChangePct
                 };
               }
               return w;
@@ -248,7 +256,20 @@ export default function Dashboard() {
       } else {
         const localWatchlist = JSON.parse(localStorage.getItem('ghost_watchlist') || '[]');
         if (!localWatchlist.find((w: any) => w.symbol === watchlistInput.toUpperCase())) {
-          localWatchlist.push({ id: 'ghost-w-' + Date.now(), symbol: watchlistInput.toUpperCase() });
+          let addedPrice = null;
+          try {
+            const qRes = await fetch(`/api/market-data?symbols=${watchlistInput.toUpperCase()}`);
+            if (qRes.ok) {
+               const data = await qRes.json();
+               addedPrice = data.results[0]?.price || null;
+            }
+          } catch(e) {}
+
+          localWatchlist.push({ 
+            id: 'ghost-w-' + Date.now(), 
+            symbol: watchlistInput.toUpperCase(),
+            addedPrice
+          });
           localStorage.setItem('ghost_watchlist', JSON.stringify(localWatchlist));
         }
       }
@@ -1396,12 +1417,23 @@ export default function Dashboard() {
                      </div>
                    </div>
                    <div className="flex justify-between items-end mt-5">
-                     <div className="text-xl font-semibold text-white tracking-tight">
-                       {formatCurrency(convertValue(w.price, w.currency))}
+                     <div>
+                       <div className="text-xl font-semibold text-white tracking-tight">
+                         {formatCurrency(convertValue(w.price, w.currency))}
+                       </div>
+                       {w.addedPrice && (
+                         <div className={`text-xs mt-1 flex items-center gap-1 font-medium ${(w.sinceAddedChangePct || 0) >= 0 ? 'text-fintech-profit' : 'text-fintech-loss'}`}>
+                           <span className="text-fintech-muted opacity-70">Total Return:</span>
+                           {(w.sinceAddedChangePct || 0) >= 0 ? '+' : ''}{(w.sinceAddedChangePct || 0).toFixed(2)}%
+                         </div>
+                       )}
                      </div>
-                     <div className={`text-sm font-bold flex items-center gap-1 px-2 py-1 rounded-md ${(w.change || 0) >= 0 ? 'bg-fintech-profit/10 text-fintech-profit' : 'bg-fintech-loss/10 text-fintech-loss'}`}>
-                       {(w.change || 0) >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                       {Math.abs(w.change || 0).toFixed(2)}%
+                     <div className="flex flex-col items-end gap-1">
+                       <div className="text-[10px] text-fintech-muted uppercase font-bold tracking-wider">Today</div>
+                       <div className={`text-sm font-bold flex items-center gap-1 px-2 py-1 rounded-md ${(w.change || 0) >= 0 ? 'bg-fintech-profit/10 text-fintech-profit' : 'bg-fintech-loss/10 text-fintech-loss'}`}>
+                         {(w.change || 0) >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                         {Math.abs(w.change || 0).toFixed(2)}%
+                       </div>
                      </div>
                    </div>
                    {aiData && (

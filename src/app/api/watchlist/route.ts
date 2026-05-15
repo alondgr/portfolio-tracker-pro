@@ -55,12 +55,24 @@ export async function GET() {
 
     const enrichedWatchlist = watchlistItems.map((item: any) => {
       const q = quotesMap[item.symbol];
+      const currentPrice = q?.price || 0;
+      let sinceAddedChange = 0;
+      let sinceAddedChangePct = 0;
+      
+      if (item.addedPrice && currentPrice > 0) {
+        sinceAddedChange = currentPrice - item.addedPrice;
+        sinceAddedChangePct = (sinceAddedChange / item.addedPrice) * 100;
+      }
+
       return {
         id: item.id,
         symbol: item.symbol,
         isStarred: item.isStarred,
+        addedPrice: item.addedPrice,
+        sinceAddedChange,
+        sinceAddedChangePct,
         name: q?.name || item.symbol,
-        price: q?.price || 0,
+        price: currentPrice,
         change: q?.change || 0,
         changeAbs: q?.changeAbs || 0,
         currency: q?.currency || 'USD',
@@ -97,10 +109,18 @@ export async function POST(request: Request) {
       });
 
       if (!existing) {
+        let addedPrice = null;
+        try {
+          const yahooFinance = new (yf.YahooFinance || yf)();
+          const q = await yahooFinance.quote(symbol.toUpperCase());
+          addedPrice = q?.regularMarketPrice || null;
+        } catch (e) {}
+
         await prisma.watchlist.create({
           data: {
             userId,
-            symbol: symbol.toUpperCase()
+            symbol: symbol.toUpperCase(),
+            addedPrice
           }
         });
       }

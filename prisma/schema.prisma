@@ -27,6 +27,7 @@ model Watchlist {
   userId    String
   symbol    String
   isStarred Boolean  @default(false)
+  addedPrice Float?
   createdAt DateTime @default(now())
 
   @@unique([userId, symbol])
