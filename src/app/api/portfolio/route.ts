@@ -124,6 +124,9 @@ export async function GET() {
       const unrealizedPL = marketValue - costBasis;
       const unrealizedPLPercent = costBasis !== 0 ? (unrealizedPL / costBasis) * 100 : 0;
       
+      const dailyChange = q?.regularMarketChange || 0;
+      const dailyChangePct = q?.regularMarketChangePercent || 0;
+      
       return {
         ...holding,
         name,
@@ -132,6 +135,8 @@ export async function GET() {
         marketValue,
         unrealizedPL,
         unrealizedPLPercent,
+        dailyChange,
+        dailyChangePct,
         yieldPct,
         sector,
         industry,

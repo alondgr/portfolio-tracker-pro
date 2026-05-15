@@ -35,7 +35,9 @@ export async function GET(request: Request) {
       symbol: q.symbol,
       price: q.regularMarketPrice || q.postMarketPrice || 0,
       change: q.regularMarketChangePercent || 0,
-      name: q.shortName || q.symbol
+      changeAbs: q.regularMarketChange || 0,
+      name: q.shortName || q.symbol,
+      currency: q.currency || 'USD'
     }));
 
     if (querySymbols) {

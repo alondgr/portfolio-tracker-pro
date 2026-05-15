@@ -33,6 +33,7 @@ export default function Dashboard() {
     avgBuyPrice: true,
     currentPrice: true,
     marketValue: true,
+    dailyChange: true,
     unrealizedPL: true,
     yieldPct: true,
     sector: true,
@@ -137,6 +138,8 @@ export default function Dashboard() {
                   marketValue,
                   unrealizedPL,
                   unrealizedPLPct,
+                  dailyChange: quote.changeAbs || 0,
+                  dailyChangePct: quote.change || 0,
                   currency: quote.currency || 'USD',
                   sector: quote.sector || "Unknown",
                   industry: quote.industry || "Unknown",
@@ -778,7 +781,7 @@ export default function Dashboard() {
                          onChange={() => setVisibleColumns(prev => ({...prev, [col]: !prev[col]}))}
                          className="rounded bg-slate-800 border-fintech-border text-fintech-accent focus:ring-fintech-accent"
                        />
-                       {col === 'index' ? '#' : col === 'unrealizedPL' ? 'Unrealized P/L' : col === 'yieldPct' ? 'Div Yield' : col === 'avgBuyPrice' ? 'Avg Price' : col.charAt(0).toUpperCase() + col.slice(1).replace(/([A-Z])/g, ' $1')}
+                       {col === 'index' ? '#' : col === 'unrealizedPL' ? 'Unrealized P/L' : col === 'yieldPct' ? 'Div Yield' : col === 'avgBuyPrice' ? 'Avg Price' : col === 'dailyChange' ? 'Daily Change' : col.charAt(0).toUpperCase() + col.slice(1).replace(/([A-Z])/g, ' $1')}
                      </label>
                    ))}
                 </div>
@@ -797,6 +800,7 @@ export default function Dashboard() {
                     {visibleColumns.avgBuyPrice && <SortableHeader label="Avg Price" sortKey="avgBuyPrice" alignRight />}
                     {visibleColumns.currentPrice && <SortableHeader label="Current Price" sortKey="currentPrice" alignRight />}
                     {visibleColumns.marketValue && <SortableHeader label="Market Value" sortKey="marketValue" alignRight />}
+                    {visibleColumns.dailyChange && <SortableHeader label="Daily Change" sortKey="dailyChange" alignRight />}
                     {visibleColumns.unrealizedPL && <SortableHeader label="Unrealized P/L" sortKey="unrealizedPL" alignRight />}
                     {visibleColumns.yieldPct && <SortableHeader label="Div Yield" sortKey="yieldPct" alignRight className="hidden md:table-cell" />}
                     {visibleColumns.sector && <SortableHeader label="Sector" sortKey="sector" className="hidden md:table-cell" />}
@@ -837,6 +841,12 @@ export default function Dashboard() {
                                 <span className="text-sm font-medium text-fintech-accent mt-0.5 tracking-wide">
                                   {totalMarketValue > 0 && h.marketValue ? ((h.marketValue / totalMarketValue) * 100).toFixed(2) : '0.00'}%
                                 </span>
+                              </div>
+                            </td>}
+                            {visibleColumns.dailyChange && <td className={`p-5 text-right font-bold ${(h.dailyChange || 0) >= 0 ? 'text-fintech-profit' : 'text-fintech-loss'}`}>
+                              <div className="flex flex-col items-end">
+                                <span>{hideValues ? '****' : `${(h.dailyChange || 0) >= 0 ? '+' : ''}${formatCurrency(convertValue((h.dailyChange || 0) * h.quantity, h.currency))}`}</span>
+                                <span className="text-sm opacity-80">{(h.dailyChangePct || 0) >= 0 ? '+' : ''}{(h.dailyChangePct || 0).toFixed(2)}%</span>
                               </div>
                             </td>}
                             {visibleColumns.unrealizedPL && <td className={`p-5 text-right font-bold ${isRowProfit ? 'text-fintech-profit' : 'text-fintech-loss'}`}>
