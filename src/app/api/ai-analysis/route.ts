@@ -19,15 +19,23 @@ export async function POST(request: Request) {
     for (const symbol of symbols) {
       try {
         const summary = await yahooFinance.quoteSummary(symbol, { 
-          modules: ['financialData', 'defaultKeyStatistics', 'assetProfile'] 
+          modules: ['financialData', 'defaultKeyStatistics', 'assetProfile', 'price'] 
         }) as any;
 
         const financialData = summary.financialData || {};
         const keyStats = summary.defaultKeyStatistics || {};
         const profile = summary.assetProfile || {};
+        const price = summary.price || {};
 
         let score = 50; // Base score
         let reasons = [];
+        
+        const currentPrice = financialData.currentPrice || price.regularMarketPrice || 0;
+        const targetPrice = financialData.targetMeanPrice || 0;
+        let upsidePct = 0;
+        if (currentPrice > 0 && targetPrice > currentPrice) {
+          upsidePct = (targetPrice - currentPrice) / currentPrice;
+        }
 
         // Profitability (Long term survival)
         if (financialData.operatingMargins > 0.2) {
@@ -85,6 +93,7 @@ export async function POST(request: Request) {
           symbol,
           score: Math.min(Math.max(score, 10), 99), // clamp between 10 and 99
           reasons: reasons.slice(0, 2), // Keep top 2 reasons
+          upsidePct,
         });
         
       } catch (e) {
@@ -93,13 +102,19 @@ export async function POST(request: Request) {
         analysisResults.push({
           symbol,
           score: 50,
-          reasons: ["Insufficient deep financial data for full 5-year analysis."]
+          reasons: ["Insufficient deep financial data for full 5-year analysis."],
+          upsidePct: 0
         });
       }
     }
 
-    // Sort by score descending
-    analysisResults.sort((a, b) => b.score - a.score);
+    // Sort by score descending, then by upside potential descending
+    analysisResults.sort((a, b) => {
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+      return (b.upsidePct || 0) - (a.upsidePct || 0);
+    });
 
     return NextResponse.json({ results: analysisResults });
 
