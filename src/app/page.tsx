@@ -7,7 +7,7 @@ import TickerTape from '@/components/TickerTape';
 import WisdomQuote from '@/components/WisdomQuote';
 import { 
   Building2, ChevronDown, ChevronUp, LogOut, Search, TrendingDown, TrendingUp, X,
-  ArrowUpDown, RefreshCw, Plus, Star, AlertCircle, RefreshCcw, Trash2, Edit2, Eye, EyeOff, Coins, Info
+  ArrowUpDown, RefreshCw, Plus, Star, AlertCircle, RefreshCcw, Trash2, Edit2, Eye, EyeOff, Coins, Info, Sparkles
 } from 'lucide-react';
 import { useUser, SignUpButton, UserButton } from '@clerk/nextjs';
 import { useConversionTimer } from '@/hooks/useConversionTimer';
@@ -26,6 +26,10 @@ export default function Dashboard() {
   const [watchlist, setWatchlist] = useState<any[]>([]);
   const [showWatchlistModal, setShowWatchlistModal] = useState(false);
   const [watchlistInput, setWatchlistInput] = useState('');
+  
+  // AI State
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResults, setAiResults] = useState<any[]>([]);
 
   // Portfolio Multi-Select State
   const [selectedPortfolioSymbols, setSelectedPortfolioSymbols] = useState<string[]>([]);
@@ -307,6 +311,31 @@ export default function Dashboard() {
       await fetchWatchlist();
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const runAiAnalysis = async () => {
+    if (watchlist.length === 0) return;
+    setAiLoading(true);
+    try {
+      const symbols = watchlist.map(w => w.symbol);
+      const res = await fetch('/api/ai-analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ symbols })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAiResults(data.results || []);
+      } else {
+        const err = await res.json();
+        setError(err.error || 'Failed to run AI analysis');
+        setTimeout(() => setError(null), 3000);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setAiLoading(false);
     }
   };
 
@@ -1255,21 +1284,45 @@ export default function Dashboard() {
               <h3 className="text-xl font-bold text-white uppercase tracking-widest opacity-80">
                 Watchlist
               </h3>
-              <button 
-                onClick={() => {
-                  setWatchlistInput('');
-                  setSearchResults([]);
-                  setShowWatchlistModal(true);
-                }}
-                className="text-sm px-4 py-2 bg-fintech-card border border-fintech-border text-white rounded-lg hover:border-fintech-accent hover:text-fintech-accent transition-colors font-medium flex items-center gap-2"
-              >
-                <Plus size={16} /> Add Symbol
-              </button>
+              <div className="flex gap-2">
+                <button 
+                  onClick={runAiAnalysis}
+                  disabled={aiLoading || watchlist.length === 0}
+                  className="text-sm px-4 py-2 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 text-indigo-300 rounded-lg hover:from-indigo-500/30 hover:to-purple-500/30 transition-colors font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {aiLoading ? <RefreshCw size={16} className="animate-spin" /> : <Sparkles size={16} />} 
+                  <span className="hidden sm:inline">{aiLoading ? 'Analyzing...' : 'AI 5-Year Picks'}</span>
+                  <span className="sm:hidden">{aiLoading ? '...' : 'AI'}</span>
+                </button>
+                <button 
+                  onClick={() => {
+                    setWatchlistInput('');
+                    setSearchResults([]);
+                    setShowWatchlistModal(true);
+                  }}
+                  className="text-sm px-4 py-2 bg-fintech-card border border-fintech-border text-white rounded-lg hover:border-fintech-accent hover:text-fintech-accent transition-colors font-medium flex items-center gap-2"
+                >
+                  <Plus size={16} /> <span className="hidden sm:inline">Add Symbol</span>
+                </button>
+              </div>
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {[...watchlist].sort((a, b) => (b.isStarred ? 1 : 0) - (a.isStarred ? 1 : 0)).map((w, i) => (
-                 <div key={i} className={`bg-fintech-card border ${w.isStarred ? 'border-amber-400/50 shadow-[0_0_15px_rgba(251,191,36,0.1)]' : 'border-fintech-border'} rounded-xl p-5 shadow-lg hover:border-fintech-accent/50 transition-colors relative group`}>
+              {[...watchlist].sort((a, b) => {
+                 const aiA = aiResults.find(r => r.symbol === a.symbol)?.score || 0;
+                 const aiB = aiResults.find(r => r.symbol === b.symbol)?.score || 0;
+                 if (aiResults.length > 0 && aiA !== aiB) return aiB - aiA;
+                 return (b.isStarred ? 1 : 0) - (a.isStarred ? 1 : 0);
+              }).map((w, i) => {
+                 const aiData = aiResults.find(r => r.symbol === w.symbol);
+                 const isTopPick = aiResults.length > 0 && aiData && aiResults[0].symbol === w.symbol;
+                 return (
+                 <div key={i} className={`bg-fintech-card border ${isTopPick ? 'border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.2)]' : w.isStarred ? 'border-amber-400/50 shadow-[0_0_15px_rgba(251,191,36,0.1)]' : 'border-fintech-border'} rounded-xl p-5 shadow-lg hover:border-fintech-accent/50 transition-colors relative group`}>
+                   {isTopPick && (
+                      <div className="absolute -top-3 -right-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg flex items-center gap-1 border border-white/20 z-10">
+                        <Sparkles size={10} /> AI TOP PICK
+                      </div>
+                   )}
                    <div className="flex justify-between items-start mb-2">
                      <div>
                        <div className="font-bold text-lg text-white tracking-wide">{w.symbol}</div>
@@ -1300,8 +1353,26 @@ export default function Dashboard() {
                        {Math.abs(w.change || 0).toFixed(2)}%
                      </div>
                    </div>
+                   {aiData && (
+                     <div className="mt-4 pt-4 border-t border-fintech-border/50">
+                       <div className="flex justify-between items-center mb-2">
+                         <span className="text-xs font-semibold text-indigo-300 flex items-center gap-1"><Sparkles size={10} /> AI Score:</span>
+                         <span className={`text-xs font-bold px-2 py-0.5 rounded ${aiData.score > 70 ? 'bg-emerald-500/20 text-emerald-400' : aiData.score > 50 ? 'bg-amber-500/20 text-amber-400' : 'bg-rose-500/20 text-rose-400'}`}>
+                           {aiData.score}/100
+                         </span>
+                       </div>
+                       <ul className="text-[10px] text-fintech-muted space-y-1">
+                         {aiData.reasons.map((r: string, idx: number) => (
+                           <li key={idx} className="flex gap-1 items-start">
+                             <div className="text-indigo-400 mt-0.5">•</div>
+                             <span className="leading-tight">{r}</span>
+                           </li>
+                         ))}
+                       </ul>
+                     </div>
+                   )}
                  </div>
-              ))}
+              )})}
               {watchlist.length === 0 && (
                 <div className="col-span-full py-10 text-center text-fintech-muted bg-fintech-card/50 rounded-xl border border-dashed border-fintech-border">
                   Your watchlist is empty. Add symbols to keep an eye on them without adding them to your portfolio.
