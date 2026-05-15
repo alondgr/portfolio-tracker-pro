@@ -47,6 +47,7 @@ export async function GET(request: Request) {
 
     // 1. Get all unique symbols and find inception date
     const symbols = Array.from(new Set(holdings.map((h: any) => h.symbol)));
+    if (!symbols.includes('^GSPC')) symbols.push('^GSPC');
     let minDate = new Date();
     holdings.forEach((h: any) => {
       h.transactions?.forEach((t: any) => {
@@ -67,6 +68,8 @@ export async function GET(request: Request) {
         if (cleanSymbol === 'INTEL') cleanSymbol = 'INTC';
         if (cleanSymbol === 'GOOGLE') cleanSymbol = 'GOOGL';
         if (cleanSymbol === 'APPLE') cleanSymbol = 'AAPL';
+        if (cleanSymbol === 'GOLD') cleanSymbol = 'GC=F';
+        if (cleanSymbol === 'BTC') cleanSymbol = 'BTC-USD';
 
         let result = await yahooFinance.historical(cleanSymbol, {
           period1: minDate,
@@ -113,22 +116,55 @@ export async function GET(request: Request) {
     // Keep track of last known prices to fill weekends/holidays
     const lastKnownPrices: Record<string, number> = {};
 
+    let initialSp500Price: number | null = null;
+
+    let cumulativeTwr = 0;
+    let previousValue = 0;
+    let previousShares: Record<string, number> = {};
+
     while (currentDate <= today) {
       const dateStr = currentDate.toISOString().split('T')[0];
       let totalValue = 0;
+      let totalCostBasis = 0;
+
+      let valueBeforeCf = 0;
+      let currentShares: Record<string, number> = {};
 
       holdings.forEach((h: any) => {
+        if (h.symbol === '^GSPC') return; // Skip S&P500 in total value calculation if it was added to holdings
+        
         // Calculate shares held ON this date
         let shares = 0;
+        let costBasis = 0;
+
         h.transactions?.forEach((t: any) => {
           const txnDate = new Date(t.date);
           txnDate.setHours(0, 0, 0, 0);
+          
           if (txnDate <= currentDate) {
-            shares += (t.type === 'BUY' ? Number(t.quantity) : -Number(t.quantity));
+            const qty = Number(t.quantity);
+            const price = Number(t.price);
+            
+            if (t.type === 'BUY') {
+              shares += qty;
+              costBasis += (qty * price);
+            } else {
+              if (shares > 0) {
+                const avgCost = costBasis / shares;
+                shares -= qty;
+                costBasis -= (qty * avgCost);
+              } else {
+                shares -= qty;
+              }
+            }
           }
         });
 
-        if (shares > 0) {
+        currentShares[h.symbol] = shares;
+
+        if (shares > 0 || (previousShares[h.symbol] && previousShares[h.symbol] > 0)) {
+          totalCostBasis += costBasis;
+
           // Find price for this date
           const prices = historicalData[h.symbol] || [];
           const priceObj = prices.find(p => {
@@ -136,20 +172,78 @@ export async function GET(request: Request) {
             return pDate.toISOString().split('T')[0] === dateStr;
           });
           
+          let priceToUse: number | undefined = undefined;
           if (priceObj && priceObj.close !== undefined) {
-            const price = priceObj.close;
-            totalValue += shares * price;
-            lastKnownPrices[h.symbol] = price;
+            priceToUse = priceObj.close;
           } else if (lastKnownPrices[h.symbol] !== undefined) {
-            totalValue += shares * lastKnownPrices[h.symbol];
+            priceToUse = lastKnownPrices[h.symbol];
+          } else {
+            // fallback: find next available price if starting on a weekend
+            const nextP = prices.find(p => new Date(p.date) > currentDate && p.close !== undefined);
+            if (nextP) priceToUse = nextP.close;
+          }
+
+          if (priceToUse !== undefined) {
+            if (previousShares[h.symbol]) {
+              valueBeforeCf += previousShares[h.symbol] * priceToUse;
+            }
+            if (shares > 0) {
+              totalValue += shares * priceToUse;
+            }
+            lastKnownPrices[h.symbol] = priceToUse;
           }
         }
       });
 
+      // Calculate Daily TWR
+      let dailyReturn = 0;
+      if (previousValue > 0) {
+        dailyReturn = (valueBeforeCf - previousValue) / previousValue;
+      } else if (totalCostBasis > 0) {
+        // First day of investment, capture the intraday return
+        dailyReturn = (totalValue - totalCostBasis) / totalCostBasis;
+      }
+      cumulativeTwr = (1 + cumulativeTwr) * (1 + dailyReturn) - 1;
+      
+      // Update for next iteration
+      previousValue = totalValue;
+      previousShares = currentShares;
+
+      // Find SP500 price for this date
+      let sp500Price = 0;
+      const sp500Prices = historicalData['^GSPC'] || [];
+      const sp500PriceObj = sp500Prices.find(p => {
+        const pDate = new Date(p.date);
+        return pDate.toISOString().split('T')[0] === dateStr;
+      });
+      if (sp500PriceObj && sp500PriceObj.close !== undefined) {
+        sp500Price = sp500PriceObj.close;
+        lastKnownPrices['^GSPC'] = sp500Price;
+      } else if (lastKnownPrices['^GSPC'] !== undefined) {
+        sp500Price = lastKnownPrices['^GSPC'];
+      } else {
+        const nextP = sp500Prices.find(p => new Date(p.date) > currentDate && p.close !== undefined);
+        if (nextP) {
+          sp500Price = nextP.close;
+          lastKnownPrices['^GSPC'] = sp500Price;
+        }
+      }
+
+      if (initialSp500Price === null && sp500Price > 0) {
+        initialSp500Price = sp500Price;
+      }
+      
+      let sp500Cumulative = 0;
+      if (initialSp500Price && initialSp500Price > 0) {
+        sp500Cumulative = (sp500Price - initialSp500Price) / initialSp500Price;
+      }
+
       timeline.push({ 
         date: currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         fullDate: dateStr,
-        value: Number(totalValue.toFixed(2))
+        value: Number(totalValue.toFixed(2)),
+        portfolioReturn: Number((cumulativeTwr * 100).toFixed(2)),
+        sp500Return: Number((sp500Cumulative * 100).toFixed(2))
       });
       
       currentDate.setDate(currentDate.getDate() + 1);

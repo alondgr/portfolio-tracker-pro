@@ -46,13 +46,13 @@
 
 /* Default (Mobile) Speed */
 :root {
-  --marquee-duration: 30s;
+  --marquee-duration: 60s;
 }
 
 /* Tablet/Desktop Speed - Slow it down for better readability on wide screens */
 @media (min-width: 768px) {
   :root {
-    --marquee-duration: 60s;
+    --marquee-duration: 120s;
   }
 }
 
