@@ -1369,9 +1369,24 @@ export default function Dashboard() {
             
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {[...watchlist].sort((a, b) => {
-                 const aiA = aiResults.find(r => r.symbol === a.symbol)?.score || 0;
-                 const aiB = aiResults.find(r => r.symbol === b.symbol)?.score || 0;
-                 if (aiResults.length > 0 && aiA !== aiB) return aiB - aiA;
+                 if (aiResults.length > 0) {
+                   const aiRankA = aiResults.findIndex(r => r.symbol === a.symbol);
+                   const aiRankB = aiResults.findIndex(r => r.symbol === b.symbol);
+                   
+                   const isTopPickA = aiRankA === 0;
+                   const isTopPickB = aiRankB === 0;
+                   
+                   if (isTopPickA && !isTopPickB) return -1;
+                   if (isTopPickB && !isTopPickA) return 1;
+                   
+                   if (a.isStarred && !b.isStarred) return -1;
+                   if (b.isStarred && !a.isStarred) return 1;
+                   
+                   const rankA = aiRankA === -1 ? 999 : aiRankA;
+                   const rankB = aiRankB === -1 ? 999 : aiRankB;
+                   
+                   return rankA - rankB;
+                 }
                  return (b.isStarred ? 1 : 0) - (a.isStarred ? 1 : 0);
               }).map((w, i) => {
                  const aiData = aiResults.find(r => r.symbol === w.symbol);
