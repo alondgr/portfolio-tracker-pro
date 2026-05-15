@@ -5,10 +5,12 @@ import AllocationCharts from '@/components/AllocationCharts';
 import PerformanceChart from '@/components/PerformanceChart';
 import TickerTape from '@/components/TickerTape';
 import WisdomQuote from '@/components/WisdomQuote';
-import { Plus, TrendingUp, TrendingDown, RefreshCw, AlertCircle, RefreshCcw, ArrowUpDown, ChevronUp, ChevronDown, Trash2, Edit2, Eye, EyeOff, Search, Building2, Coins } from 'lucide-react';
+import { 
+  Building2, ChevronDown, ChevronUp, LogOut, Search, TrendingDown, TrendingUp, X,
+  ArrowUpDown, RefreshCw, Plus, Star, AlertCircle, RefreshCcw, Trash2, Edit2, Eye, EyeOff, Coins, Info
+} from 'lucide-react';
 import { useUser, SignUpButton, UserButton } from '@clerk/nextjs';
 import { useConversionTimer } from '@/hooks/useConversionTimer';
-import { Info, X } from 'lucide-react';
 
 
 export default function Dashboard() {
@@ -260,6 +262,46 @@ export default function Dashboard() {
       } else {
         let localWatchlist = JSON.parse(localStorage.getItem('ghost_watchlist') || '[]');
         localWatchlist = localWatchlist.filter((w: any) => w.id !== idOrSymbol && w.symbol !== idOrSymbol);
+        localStorage.setItem('ghost_watchlist', JSON.stringify(localWatchlist));
+      }
+      await fetchWatchlist();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleToggleStar = async (item: any) => {
+    try {
+      const action = item.isStarred ? 'unstar' : 'star';
+      if (action === 'star') {
+        const starredCount = watchlist.filter(w => w.isStarred).length;
+        if (starredCount >= 3) {
+          setError('You can only star up to 3 stocks in your watchlist.');
+          setTimeout(() => setError(null), 3000);
+          return;
+        }
+      }
+      
+      if (user) {
+        const res = await fetch('/api/watchlist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, [item.id ? 'id' : 'symbol']: item.id || item.symbol })
+        });
+        if (!res.ok) {
+           const data = await res.json();
+           setError(data.error || 'Failed to update star');
+           setTimeout(() => setError(null), 3000);
+           return;
+        }
+      } else {
+        let localWatchlist = JSON.parse(localStorage.getItem('ghost_watchlist') || '[]');
+        localWatchlist = localWatchlist.map((w: any) => {
+          if ((item.id && w.id === item.id) || w.symbol === item.symbol) {
+             return { ...w, isStarred: !item.isStarred };
+          }
+          return w;
+        });
         localStorage.setItem('ghost_watchlist', JSON.stringify(localWatchlist));
       }
       await fetchWatchlist();
@@ -787,16 +829,26 @@ export default function Dashboard() {
             </button>
             {showPortfolioDropdown && (
               <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-64 bg-slate-900 border border-fintech-border rounded-xl shadow-2xl z-50 p-2 max-h-80 overflow-y-auto custom-scrollbar">
-                <div className="p-2 border-b border-fintech-border mb-2 flex justify-between items-center">
+                <div className="p-2 border-b border-fintech-border mb-2 flex flex-wrap justify-between items-center gap-2">
                   <span className="text-sm font-semibold text-white">Filter Portfolio</span>
-                  {selectedPortfolioSymbols.length > 0 && (
-                    <button 
-                      onClick={() => setSelectedPortfolioSymbols([])}
-                      className="text-xs text-fintech-accent hover:text-white transition-colors"
-                    >
-                      Clear All
-                    </button>
-                  )}
+                  <div className="flex gap-2">
+                    {selectedPortfolioSymbols.length !== allUniqueSymbols.length && allUniqueSymbols.length > 0 && (
+                      <button 
+                        onClick={() => setSelectedPortfolioSymbols(allUniqueSymbols)}
+                        className="text-xs text-fintech-accent hover:text-white transition-colors"
+                      >
+                        Select All
+                      </button>
+                    )}
+                    {selectedPortfolioSymbols.length > 0 && (
+                      <button 
+                        onClick={() => setSelectedPortfolioSymbols([])}
+                        className="text-xs text-fintech-accent hover:text-white transition-colors"
+                      >
+                        Clear All
+                      </button>
+                    )}
+                  </div>
                 </div>
                 {allUniqueSymbols.map(sym => (
                   <label key={sym} className="flex items-center gap-3 p-2 hover:bg-slate-800 rounded cursor-pointer text-sm text-slate-300">
@@ -1216,19 +1268,28 @@ export default function Dashboard() {
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {watchlist.map((w, i) => (
-                 <div key={i} className="bg-fintech-card border border-fintech-border rounded-xl p-5 shadow-lg hover:border-fintech-accent/50 transition-colors relative group">
+              {[...watchlist].sort((a, b) => (b.isStarred ? 1 : 0) - (a.isStarred ? 1 : 0)).map((w, i) => (
+                 <div key={i} className={`bg-fintech-card border ${w.isStarred ? 'border-amber-400/50 shadow-[0_0_15px_rgba(251,191,36,0.1)]' : 'border-fintech-border'} rounded-xl p-5 shadow-lg hover:border-fintech-accent/50 transition-colors relative group`}>
                    <div className="flex justify-between items-start mb-2">
                      <div>
                        <div className="font-bold text-lg text-white tracking-wide">{w.symbol}</div>
                        <div className="text-xs text-fintech-muted truncate max-w-[140px] opacity-80 mt-0.5">{w.name}</div>
                      </div>
-                     <button 
-                       onClick={() => handleRemoveFromWatchlist(w.id || w.symbol)}
-                       className="text-fintech-muted hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-md hover:bg-rose-500/10"
-                     >
-                       <X size={16} />
-                     </button>
+                     <div className="flex items-center gap-1">
+                       <button 
+                         onClick={() => handleToggleStar(w)}
+                         className={`p-1.5 rounded-md transition-colors ${w.isStarred ? 'text-amber-400 hover:text-amber-300' : 'text-fintech-muted hover:text-amber-400/70 opacity-0 group-hover:opacity-100'}`}
+                         title={w.isStarred ? "Unstar" : "Star"}
+                       >
+                         <Star size={16} fill={w.isStarred ? 'currentColor' : 'none'} />
+                       </button>
+                       <button 
+                         onClick={() => handleRemoveFromWatchlist(w.id || w.symbol)}
+                         className="text-fintech-muted hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-md hover:bg-rose-500/10"
+                       >
+                         <X size={16} />
+                       </button>
+                     </div>
                    </div>
                    <div className="flex justify-between items-end mt-5">
                      <div className="text-xl font-semibold text-white tracking-tight">

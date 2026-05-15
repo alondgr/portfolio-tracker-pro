@@ -36,6 +36,7 @@ export async function GET() {
       return {
         id: item.id,
         symbol: item.symbol,
+        isStarred: item.isStarred,
         name: q?.shortName || q?.longName || item.symbol,
         price: q?.regularMarketPrice || 0,
         change: q?.regularMarketChangePercent || 0,
@@ -87,6 +88,38 @@ export async function POST(request: Request) {
       } else if (symbol) {
         await prisma.watchlist.deleteMany({
           where: { symbol: symbol.toUpperCase(), userId }
+        });
+      }
+    } else if (action === 'star') {
+      const starredCount = await prisma.watchlist.count({
+        where: { userId, isStarred: true }
+      });
+
+      if (starredCount >= 3) {
+        return NextResponse.json({ error: 'You can only star up to 3 stocks' }, { status: 400 });
+      }
+
+      if (id) {
+        await prisma.watchlist.updateMany({
+          where: { id, userId },
+          data: { isStarred: true }
+        });
+      } else if (symbol) {
+        await prisma.watchlist.updateMany({
+          where: { symbol: symbol.toUpperCase(), userId },
+          data: { isStarred: true }
+        });
+      }
+    } else if (action === 'unstar') {
+      if (id) {
+        await prisma.watchlist.updateMany({
+          where: { id, userId },
+          data: { isStarred: false }
+        });
+      } else if (symbol) {
+        await prisma.watchlist.updateMany({
+          where: { symbol: symbol.toUpperCase(), userId },
+          data: { isStarred: false }
         });
       }
     }
