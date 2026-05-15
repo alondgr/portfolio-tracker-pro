@@ -21,6 +21,9 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [hideValues, setHideValues] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [watchlist, setWatchlist] = useState<any[]>([]);
+  const [showWatchlistModal, setShowWatchlistModal] = useState(false);
+  const [watchlistInput, setWatchlistInput] = useState('');
 
   // Portfolio Multi-Select State
   const [selectedPortfolioSymbols, setSelectedPortfolioSymbols] = useState<string[]>([]);
@@ -96,13 +99,24 @@ export default function Dashboard() {
         console.error('Failed to migrate holding:', holding.symbol, err);
       }
     }
-    localStorage.removeItem('ghost_holdings');
-    localStorage.removeItem('ghost_timer_start');
+    const localWatchlist = JSON.parse(localStorage.getItem('ghost_watchlist') || '[]');
+    for (const w of localWatchlist) {
+      try {
+        await fetch('/api/watchlist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'add', symbol: w.symbol })
+        });
+      } catch(err) {}
+    }
+    localStorage.removeItem('ghost_watchlist');
+    
     fetchPortfolio();
+    fetchWatchlist();
   };
 
   useEffect(() => {
-    if (user && isLoaded && localStorage.getItem('ghost_holdings')) {
+    if (user && isLoaded && (localStorage.getItem('ghost_holdings') || localStorage.getItem('ghost_watchlist'))) {
       migrateLocalData();
     }
   }, [user, isLoaded]);
@@ -166,6 +180,94 @@ export default function Dashboard() {
     }
   };
 
+  const fetchWatchlist = async () => {
+    try {
+      if (user) {
+        const res = await fetch('/api/watchlist');
+        if (res.ok) {
+          const data = await res.json();
+          setWatchlist(data.watchlist || []);
+        }
+      } else {
+        const localWatchlist = JSON.parse(localStorage.getItem('ghost_watchlist') || '[]');
+        if (localWatchlist.length > 0) {
+          const symbols = localWatchlist.map((w: any) => w.symbol).join(',');
+          const quoteRes = await fetch(`/api/market-data?symbols=${symbols}`);
+          if (quoteRes.ok) {
+            const marketData = await quoteRes.json();
+            const quotes = Array.isArray(marketData) ? marketData : (marketData.results || []);
+            const updated = localWatchlist.map((w: any) => {
+              const quote = quotes.find((m: any) => m.symbol === w.symbol);
+              if (quote) {
+                return {
+                  ...w,
+                  price: quote.price,
+                  change: quote.change,
+                  changeAbs: quote.changeAbs,
+                  name: quote.name,
+                  currency: quote.currency
+                };
+              }
+              return w;
+            });
+            setWatchlist(updated);
+          }
+        } else {
+          setWatchlist([]);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleAddToWatchlist = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!watchlistInput) return;
+    setSubmitLoading(true);
+    try {
+      if (user) {
+        await fetch('/api/watchlist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'add', symbol: watchlistInput })
+        });
+      } else {
+        const localWatchlist = JSON.parse(localStorage.getItem('ghost_watchlist') || '[]');
+        if (!localWatchlist.find((w: any) => w.symbol === watchlistInput.toUpperCase())) {
+          localWatchlist.push({ id: 'ghost-w-' + Date.now(), symbol: watchlistInput.toUpperCase() });
+          localStorage.setItem('ghost_watchlist', JSON.stringify(localWatchlist));
+        }
+      }
+      await fetchWatchlist();
+      setShowWatchlistModal(false);
+      setWatchlistInput('');
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
+  const handleRemoveFromWatchlist = async (idOrSymbol: string) => {
+    try {
+      if (user) {
+        await fetch('/api/watchlist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'remove', [idOrSymbol.startsWith('ghost') ? 'symbol' : 'id']: idOrSymbol })
+        });
+      } else {
+        let localWatchlist = JSON.parse(localStorage.getItem('ghost_watchlist') || '[]');
+        localWatchlist = localWatchlist.filter((w: any) => w.id !== idOrSymbol && w.symbol !== idOrSymbol);
+        localStorage.setItem('ghost_watchlist', JSON.stringify(localWatchlist));
+      }
+      await fetchWatchlist();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const fetchPerformance = async (symbols?: string[]) => {
     if (!user) {
       setPerformanceData([]);
@@ -207,6 +309,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (!isLoaded) return;
     fetchPortfolio();
+    fetchWatchlist();
     fetchRates();
     fetchMarketData();
   }, [isLoaded, user]);
@@ -1094,6 +1197,58 @@ export default function Dashboard() {
           
           <AllocationCharts holdings={sortedHoldings} />
 
+          {/* Watchlist Section */}
+          <div className="mt-12 mb-12">
+            <div className="flex justify-between items-center mb-6 border-b border-fintech-border pb-3">
+              <h3 className="text-xl font-bold text-white uppercase tracking-widest opacity-80">
+                Watchlist
+              </h3>
+              <button 
+                onClick={() => {
+                  setWatchlistInput('');
+                  setSearchResults([]);
+                  setShowWatchlistModal(true);
+                }}
+                className="text-sm px-4 py-2 bg-fintech-card border border-fintech-border text-white rounded-lg hover:border-fintech-accent hover:text-fintech-accent transition-colors font-medium flex items-center gap-2"
+              >
+                <Plus size={16} /> Add Symbol
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {watchlist.map((w, i) => (
+                 <div key={i} className="bg-fintech-card border border-fintech-border rounded-xl p-5 shadow-lg hover:border-fintech-accent/50 transition-colors relative group">
+                   <div className="flex justify-between items-start mb-2">
+                     <div>
+                       <div className="font-bold text-lg text-white tracking-wide">{w.symbol}</div>
+                       <div className="text-xs text-fintech-muted truncate max-w-[140px] opacity-80 mt-0.5">{w.name}</div>
+                     </div>
+                     <button 
+                       onClick={() => handleRemoveFromWatchlist(w.id || w.symbol)}
+                       className="text-fintech-muted hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-md hover:bg-rose-500/10"
+                     >
+                       <X size={16} />
+                     </button>
+                   </div>
+                   <div className="flex justify-between items-end mt-5">
+                     <div className="text-xl font-semibold text-white tracking-tight">
+                       {formatCurrency(convertValue(w.price, w.currency))}
+                     </div>
+                     <div className={`text-sm font-bold flex items-center gap-1 px-2 py-1 rounded-md ${(w.change || 0) >= 0 ? 'bg-fintech-profit/10 text-fintech-profit' : 'bg-fintech-loss/10 text-fintech-loss'}`}>
+                       {(w.change || 0) >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                       {Math.abs(w.change || 0).toFixed(2)}%
+                     </div>
+                   </div>
+                 </div>
+              ))}
+              {watchlist.length === 0 && (
+                <div className="col-span-full py-10 text-center text-fintech-muted bg-fintech-card/50 rounded-xl border border-dashed border-fintech-border">
+                  Your watchlist is empty. Add symbols to keep an eye on them without adding them to your portfolio.
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Closed Positions Section */}
           {closedHoldings.length > 0 && (
             <div className="mt-12 backdrop-blur-md">
@@ -1424,6 +1579,86 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* Watchlist Modal */}
+      {showWatchlistModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-fintech-card border border-fintech-border w-full max-w-md rounded-2xl p-6 shadow-2xl transform transition-all">
+            <h2 className="text-2xl font-bold text-white mb-6">Add to Watchlist</h2>
+            <form onSubmit={handleAddToWatchlist} className="space-y-4">
+              <div className="relative symbol-search-container">
+                <label className="block text-sm font-medium text-fintech-muted mb-1">Symbol (e.g. AAPL)</label>
+                <div className="relative">
+                  <input
+                    type="text" required
+                    value={watchlistInput}
+                    onChange={e => {
+                      const val = e.target.value.toUpperCase();
+                      setWatchlistInput(val);
+                      handleSymbolSearch(val);
+                    }}
+                    onFocus={() => watchlistInput && setShowDropdown(true)}
+                    className="w-full bg-fintech-bg border border-fintech-border rounded-xl px-4 py-3 pl-11 text-white focus:outline-none focus:ring-2 focus:ring-fintech-accent transition-all uppercase"
+                    placeholder="AAPL"
+                  />
+                  <Search className="absolute left-4 top-3.5 text-fintech-muted" size={18} />
+                </div>
+
+                {showDropdown && (searchResults.length > 0 || searchLoading) && (
+                  <div className="absolute w-full mt-2 bg-slate-900 border border-fintech-border rounded-xl shadow-2xl z-[60] max-h-60 overflow-y-auto overflow-x-hidden custom-scrollbar">
+                    {searchLoading ? (
+                      <div className="p-4 flex items-center justify-center gap-2 text-fintech-muted">
+                        <RefreshCw size={16} className="animate-spin text-fintech-accent" />
+                        <span className="text-sm">Searching...</span>
+                      </div>
+                    ) : (
+                      searchResults.map((s, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            setWatchlistInput(s.symbol);
+                            setShowDropdown(false);
+                          }}
+                          className="w-full p-4 flex items-center gap-3 hover:bg-slate-800 transition-colors border-b border-slate-800 last:border-0 text-left"
+                        >
+                          <div className="w-10 h-10 rounded-lg bg-fintech-accent/10 flex items-center justify-center shrink-0">
+                            <Building2 size={20} className="text-fintech-accent" />
+                          </div>
+                          <div className="overflow-hidden">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-white">{s.symbol}</span>
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-700 text-slate-300 font-medium uppercase">{s.exchange}</span>
+                            </div>
+                            <div className="text-xs text-fintech-muted truncate">{s.name}</div>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-3 mt-8">
+                <button
+                  type="button"
+                  onClick={() => setShowWatchlistModal(false)}
+                  className="flex-1 py-3 px-4 rounded-xl font-medium text-fintech-text bg-fintech-bg border border-fintech-border hover:bg-fintech-border transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitLoading || !watchlistInput}
+                  className="flex-1 py-3 px-4 rounded-xl font-medium text-white bg-fintech-accent hover:bg-blue-600 transition-colors shadow-[0_0_15px_rgba(59,130,246,0.4)] disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center"
+                >
+                  {submitLoading ? <RefreshCw size={20} className="animate-spin" /> : 'Add Symbol'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* News Ticker */}
       <TickerTape items={tickerItems} />
       {/* Conversion Prompt Modal */}
