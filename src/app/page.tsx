@@ -1423,7 +1423,7 @@ export default function Dashboard() {
                        </div>
                        {w.addedPrice && (
                          <div className={`text-xs mt-1 flex items-center gap-1 font-medium ${(w.sinceAddedChangePct || 0) >= 0 ? 'text-fintech-profit' : 'text-fintech-loss'}`}>
-                           <span className="text-fintech-muted opacity-70">Total Return:</span>
+                           <span className="text-fintech-muted opacity-70">Total Return Since Watched:</span>
                            {(w.sinceAddedChangePct || 0) >= 0 ? '+' : ''}{(w.sinceAddedChangePct || 0).toFixed(2)}%
                          </div>
                        )}
