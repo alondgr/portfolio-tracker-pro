@@ -10,7 +10,6 @@ import { useUser, SignUpButton, UserButton } from '@clerk/nextjs';
 import { useConversionTimer } from '@/hooks/useConversionTimer';
 import { Info, X } from 'lucide-react';
 
-const HATEFUL_8 = ['NVDA', 'PLTR', 'COIN', 'CRCL', 'GOLD', 'OXY', 'B', 'NEE', 'IRM'];
 
 export default function Dashboard() {
   const { user, isLoaded } = useUser();
@@ -20,9 +19,12 @@ export default function Dashboard() {
   const [marketData, setMarketData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showHateful8, setShowHateful8] = useState(false);
   const [hideValues, setHideValues] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+
+  // Portfolio Multi-Select State
+  const [selectedPortfolioSymbols, setSelectedPortfolioSymbols] = useState<string[]>([]);
+  const [showPortfolioDropdown, setShowPortfolioDropdown] = useState(false);
 
   // Column Visibility State
   const [showColumnDropdown, setShowColumnDropdown] = useState(false);
@@ -211,12 +213,12 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!isLoaded) return;
-    if (showHateful8) {
-      fetchPerformance(HATEFUL_8);
+    if (selectedPortfolioSymbols.length > 0) {
+      fetchPerformance(selectedPortfolioSymbols);
     } else {
       fetchPerformance();
     }
-  }, [showHateful8, isLoaded, user]);
+  }, [selectedPortfolioSymbols, isLoaded, user]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -226,6 +228,9 @@ export default function Dashboard() {
       }
       if (!target.closest('.column-dropdown-container')) {
         setShowColumnDropdown(false);
+      }
+      if (!target.closest('.portfolio-dropdown-container')) {
+        setShowPortfolioDropdown(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -520,13 +525,14 @@ export default function Dashboard() {
 
   const openHoldingsSource = holdings.filter(h => h.quantity > 0);
   const closedHoldingsSource = holdings.filter(h => h.quantity <= 0);
+  const allUniqueSymbols = Array.from(new Set([...openHoldingsSource, ...closedHoldingsSource].map(h => h.symbol))).sort();
 
-  const filteredHoldings = showHateful8
-    ? openHoldingsSource.filter(h => HATEFUL_8.includes(h.symbol))
+  const filteredHoldings = selectedPortfolioSymbols.length > 0
+    ? openHoldingsSource.filter(h => selectedPortfolioSymbols.includes(h.symbol))
     : openHoldingsSource;
 
-  const closedHoldings = showHateful8
-    ? closedHoldingsSource.filter(h => HATEFUL_8.includes(h.symbol))
+  const closedHoldings = selectedPortfolioSymbols.length > 0
+    ? closedHoldingsSource.filter(h => selectedPortfolioSymbols.includes(h.symbol))
     : closedHoldingsSource;
 
   // Sorting logic
@@ -591,7 +597,7 @@ export default function Dashboard() {
         change: m.change.toFixed(2) + '%',
       };
     }),
-    ...holdings.filter(h => HATEFUL_8.includes(h.symbol)).map(h => ({
+    ...holdings.filter(h => selectedPortfolioSymbols.includes(h.symbol)).map(h => ({
       symbol: h.symbol,
       price: formatCurrency(convertValue(h.currentPrice, h.currency)),
       change: (h.dailyChangePct || 0).toFixed(2) + '%',
@@ -628,7 +634,7 @@ export default function Dashboard() {
         <div>
           <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-fintech-accent to-emerald-400">
             Portfolio Tracker
-            {showHateful8 && <span className="ml-3 text-sm font-bold px-3 py-1 bg-amber-500/20 text-amber-500 rounded-full border border-amber-500/30 uppercase tracking-widest align-middle">Focus Mode: Hateful 8</span>}
+            {selectedPortfolioSymbols.length > 0 && <span className="ml-3 text-sm font-bold px-3 py-1 bg-amber-500/20 text-amber-500 rounded-full border border-amber-500/30 uppercase tracking-widest align-middle">Custom View</span>}
           </h1>
           <p className="text-fintech-muted mt-2">Real-time insights and analytics.</p>
           {lastUpdated && (
@@ -665,15 +671,53 @@ export default function Dashboard() {
               )
             )}
           </div>
-          <button
-            onClick={() => setShowHateful8(!showHateful8)}
-            className={`flex-1 sm:flex-none px-4 py-2 rounded-full font-medium transition-all duration-300 border order-3 sm:order-none ${showHateful8
-              ? 'bg-fintech-accent border-fintech-accent text-white shadow-[0_0_15px_rgba(59,130,246,0.5)]'
-              : 'bg-fintech-card border-fintech-border text-fintech-text hover:bg-fintech-border'
-              }`}
-          >
-            Hateful 8 View
-          </button>
+          <div className="relative portfolio-dropdown-container order-3 sm:order-none">
+            <button
+              onClick={() => setShowPortfolioDropdown(!showPortfolioDropdown)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all duration-300 border ${selectedPortfolioSymbols.length > 0
+                ? 'bg-fintech-accent border-fintech-accent text-white shadow-[0_0_15px_rgba(59,130,246,0.5)]'
+                : 'bg-fintech-card border-fintech-border text-fintech-text hover:bg-fintech-border'
+                }`}
+            >
+              {selectedPortfolioSymbols.length > 0 ? `Filtered (${selectedPortfolioSymbols.length})` : 'All Assets'}
+              <ChevronDown size={14} />
+            </button>
+            {showPortfolioDropdown && (
+              <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-64 bg-slate-900 border border-fintech-border rounded-xl shadow-2xl z-50 p-2 max-h-80 overflow-y-auto custom-scrollbar">
+                <div className="p-2 border-b border-fintech-border mb-2 flex justify-between items-center">
+                  <span className="text-sm font-semibold text-white">Filter Portfolio</span>
+                  {selectedPortfolioSymbols.length > 0 && (
+                    <button 
+                      onClick={() => setSelectedPortfolioSymbols([])}
+                      className="text-xs text-fintech-accent hover:text-white transition-colors"
+                    >
+                      Clear All
+                    </button>
+                  )}
+                </div>
+                {allUniqueSymbols.map(sym => (
+                  <label key={sym} className="flex items-center gap-3 p-2 hover:bg-slate-800 rounded cursor-pointer text-sm text-slate-300">
+                    <input 
+                      type="checkbox" 
+                      checked={selectedPortfolioSymbols.includes(sym)}
+                      onChange={() => {
+                        setSelectedPortfolioSymbols(prev => 
+                          prev.includes(sym) 
+                            ? prev.filter(s => s !== sym) 
+                            : [...prev, sym]
+                        );
+                      }}
+                      className="rounded bg-slate-800 border-fintech-border text-fintech-accent focus:ring-fintech-accent"
+                    />
+                    <div className="font-medium text-white">{sym}</div>
+                  </label>
+                ))}
+                {allUniqueSymbols.length === 0 && (
+                   <div className="text-sm text-fintech-muted p-2 text-center">No assets found.</div>
+                )}
+              </div>
+            )}
+          </div>
           <div className="flex gap-2 order-4 sm:order-none">
             <button
               onClick={fetchPortfolio}
