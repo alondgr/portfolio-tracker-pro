@@ -22,14 +22,36 @@ export async function GET() {
     const symbols = watchlistItems.map((item: any) => item.symbol);
     
     const yahooFinance = new (yf.YahooFinance || yf)();
-    const quotes = await yahooFinance.quote(symbols);
     
     const quotesMap: Record<string, any> = {};
-    if (Array.isArray(quotes)) {
-      quotes.forEach((q: any) => quotesMap[q.symbol] = q);
-    } else if (quotes) {
-      quotesMap[(quotes as any).symbol] = quotes;
-    }
+    await Promise.all(symbols.map(async (sym: string) => {
+      try {
+        const summary = await yahooFinance.quoteSummary(sym, { modules: ['price', 'assetProfile'] }) as any;
+        quotesMap[sym] = {
+          price: summary.price?.regularMarketPrice || 0,
+          change: summary.price?.regularMarketChangePercent || 0,
+          changeAbs: summary.price?.regularMarketChange || 0,
+          name: summary.price?.shortName || summary.price?.longName || sym,
+          currency: summary.price?.currency || 'USD',
+          sector: summary.assetProfile?.sector || "Unknown",
+          industry: summary.assetProfile?.industry || "Unknown",
+        };
+      } catch (e) {
+        // Fallback to simple quote if quoteSummary fails
+        try {
+          const q = await yahooFinance.quote(sym);
+          quotesMap[sym] = {
+            price: q?.regularMarketPrice || 0,
+            change: q?.regularMarketChangePercent || 0,
+            changeAbs: q?.regularMarketChange || 0,
+            name: q?.shortName || q?.longName || sym,
+            currency: q?.currency || 'USD',
+            sector: "Unknown",
+            industry: "Unknown",
+          };
+        } catch (err) {}
+      }
+    }));
 
     const enrichedWatchlist = watchlistItems.map((item: any) => {
       const q = quotesMap[item.symbol];
@@ -37,11 +59,13 @@ export async function GET() {
         id: item.id,
         symbol: item.symbol,
         isStarred: item.isStarred,
-        name: q?.shortName || q?.longName || item.symbol,
-        price: q?.regularMarketPrice || 0,
-        change: q?.regularMarketChangePercent || 0,
-        changeAbs: q?.regularMarketChange || 0,
-        currency: q?.currency || 'USD'
+        name: q?.name || item.symbol,
+        price: q?.price || 0,
+        change: q?.change || 0,
+        changeAbs: q?.changeAbs || 0,
+        currency: q?.currency || 'USD',
+        sector: q?.sector || "Unknown",
+        industry: q?.industry || "Unknown",
       };
     });
 

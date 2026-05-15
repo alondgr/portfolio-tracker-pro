@@ -12,6 +12,11 @@ import {
 import { useUser, SignUpButton, UserButton } from '@clerk/nextjs';
 import { useConversionTimer } from '@/hooks/useConversionTimer';
 
+const CHART_COLORS = [
+  '#3B82F6', '#10B981', '#6366F1', '#8B5CF6', '#EC4899', '#F43F5E', '#F59E0B', '#14B8A6', '#06B6D4',
+  '#EAB308', '#84CC16', '#22C55E', '#0EA5E9', '#D946EF', '#9333EA', '#F97316', '#EF4444', '#10B981'
+];
+
 
 export default function Dashboard() {
   const { user, isLoaded } = useUser();
@@ -211,7 +216,9 @@ export default function Dashboard() {
                   change: quote.change,
                   changeAbs: quote.changeAbs,
                   name: quote.name,
-                  currency: quote.currency
+                  currency: quote.currency,
+                  sector: quote.sector || "Unknown",
+                  industry: quote.industry || "Unknown"
                 };
               }
               return w;
@@ -536,6 +543,38 @@ export default function Dashboard() {
   const formatCurrency = (value: number, noDecimals: boolean = false) => {
     if (value === undefined || value === null) return '---';
     return `${currencySymbols[selectedCurrency] || '$'}${value.toLocaleString(undefined, { minimumFractionDigits: noDecimals ? 0 : 2, maximumFractionDigits: noDecimals ? 0 : 2 })}`;
+  };
+
+  const getHashColor = (str: string, offset = 0) => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    return CHART_COLORS[Math.abs(hash + offset) % CHART_COLORS.length];
+  };
+
+  const getSectorColor = (sector: string) => {
+    if (!sector || sector === 'Unknown') return '#475569';
+    const sectorMap: Record<string, number> = {};
+    holdings.forEach(h => {
+      if ((h.marketValue || 0) <= 0) return;
+      const s = h.sector || 'Unknown';
+      sectorMap[s] = (sectorMap[s] || 0) + (h.marketValue || 0);
+    });
+    const index = Object.keys(sectorMap).indexOf(sector);
+    if (index === -1) return getHashColor(sector);
+    return CHART_COLORS[index % CHART_COLORS.length];
+  };
+
+  const getIndustryColor = (industry: string) => {
+    if (!industry || industry === 'Unknown') return '#475569';
+    const industryMap: Record<string, number> = {};
+    holdings.forEach(h => {
+      if ((h.marketValue || 0) <= 0) return;
+      const i = h.industry || 'Unknown';
+      industryMap[i] = (industryMap[i] || 0) + (h.marketValue || 0);
+    });
+    const index = Object.keys(industryMap).indexOf(industry);
+    if (index === -1) return getHashColor(industry, 3);
+    return CHART_COLORS[(index + 3) % CHART_COLORS.length];
   };
 
   const handleEditTransactionSubmit = async (e: React.FormEvent, symbol: string) => {
@@ -1327,6 +1366,18 @@ export default function Dashboard() {
                      <div>
                        <div className="font-bold text-lg text-white tracking-wide">{w.symbol}</div>
                        <div className="text-xs text-fintech-muted truncate max-w-[140px] opacity-80 mt-0.5">{w.name}</div>
+                       <div className="flex flex-wrap gap-1 mt-2">
+                         {w.sector && w.sector !== 'Unknown' && (
+                           <span className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider text-white shadow-sm" style={{ backgroundColor: getSectorColor(w.sector) }}>
+                             {w.sector}
+                           </span>
+                         )}
+                         {w.industry && w.industry !== 'Unknown' && (
+                           <span className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider text-white shadow-sm" style={{ backgroundColor: getIndustryColor(w.industry) }}>
+                             {w.industry}
+                           </span>
+                         )}
+                       </div>
                      </div>
                      <div className="flex items-center gap-1">
                        <button 
