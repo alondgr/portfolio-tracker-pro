@@ -354,9 +354,9 @@ export default function Dashboard() {
     return to === 'USD' ? usdValue : usdValue * (rates[to] || 1);
   };
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number, noDecimals: boolean = false) => {
     if (value === undefined || value === null) return '---';
-    return `${currencySymbols[selectedCurrency] || '$'}${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `${currencySymbols[selectedCurrency] || '$'}${value.toLocaleString(undefined, { minimumFractionDigits: noDecimals ? 0 : 2, maximumFractionDigits: noDecimals ? 0 : 2 })}`;
   };
 
   const handleEditTransactionSubmit = async (e: React.FormEvent, symbol: string) => {
@@ -594,7 +594,7 @@ export default function Dashboard() {
     ...holdings.filter(h => HATEFUL_8.includes(h.symbol)).map(h => ({
       symbol: h.symbol,
       price: formatCurrency(convertValue(h.currentPrice, h.currency)),
-      change: (h.unrealizedPLPercent || 0).toFixed(2) + '%',
+      change: (h.dailyChangePct || 0).toFixed(2) + '%',
       isCustom: true
     }))
   ];
@@ -713,7 +713,7 @@ export default function Dashboard() {
           <div className="absolute inset-0 bg-gradient-to-br from-fintech-muted/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
           <p className="text-fintech-muted font-medium mb-1 relative z-10">Total Capital Invested</p>
           <h2 className="text-3xl font-bold text-white relative z-10">
-            {hideValues ? '****' : formatCurrency(totalCostBasis)}
+            {hideValues ? '****' : formatCurrency(totalCostBasis, true)}
           </h2>
         </div>
 
@@ -721,7 +721,7 @@ export default function Dashboard() {
           <div className="absolute inset-0 bg-gradient-to-br from-fintech-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
           <p className="text-fintech-muted font-medium mb-1 relative z-10">Total Value</p>
           <h2 className="text-3xl font-bold text-white relative z-10">
-            {hideValues ? '****' : formatCurrency(totalMarketValue)}
+            {hideValues ? '****' : formatCurrency(totalMarketValue, true)}
           </h2>
         </div>
 
