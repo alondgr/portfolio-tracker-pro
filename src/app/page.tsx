@@ -24,6 +24,22 @@ export default function Dashboard() {
   const [hideValues, setHideValues] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
+  // Column Visibility State
+  const [showColumnDropdown, setShowColumnDropdown] = useState(false);
+  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
+    index: true,
+    symbol: true,
+    quantity: true,
+    avgBuyPrice: true,
+    currentPrice: true,
+    marketValue: true,
+    unrealizedPL: true,
+    yieldPct: true,
+    sector: true,
+    industry: true,
+    actions: true
+  });
+
   // Sorting state
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
@@ -204,6 +220,9 @@ export default function Dashboard() {
       const target = e.target as HTMLElement;
       if (!target.closest('.symbol-search-container')) {
         setShowDropdown(false);
+      }
+      if (!target.closest('.column-dropdown-container')) {
+        setShowColumnDropdown(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -737,29 +756,58 @@ export default function Dashboard() {
         </div>
       ) : (
         <>
-          {/* Table */}
+          {/* Table Area */}
+          <div className="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+            <h3 className="text-xl font-bold text-white uppercase tracking-widest opacity-80">
+              Holdings
+            </h3>
+            <div className="relative column-dropdown-container">
+              <button 
+                onClick={() => setShowColumnDropdown(!showColumnDropdown)}
+                className="flex items-center gap-2 px-3 py-1.5 bg-fintech-card border border-fintech-border rounded-lg text-sm text-fintech-muted hover:text-white transition-colors"
+              >
+                Columns <ChevronDown size={14} />
+              </button>
+              {showColumnDropdown && (
+                <div className="absolute right-0 mt-2 w-48 bg-slate-900 border border-fintech-border rounded-xl shadow-2xl z-50 p-2">
+                   {Object.keys(visibleColumns).map(col => (
+                     <label key={col} className="flex items-center gap-2 p-2 hover:bg-slate-800 rounded cursor-pointer text-sm text-slate-300">
+                       <input 
+                         type="checkbox" 
+                         checked={visibleColumns[col]} 
+                         onChange={() => setVisibleColumns(prev => ({...prev, [col]: !prev[col]}))}
+                         className="rounded bg-slate-800 border-fintech-border text-fintech-accent focus:ring-fintech-accent"
+                       />
+                       {col === 'index' ? '#' : col === 'unrealizedPL' ? 'Unrealized P/L' : col === 'yieldPct' ? 'Div Yield' : col === 'avgBuyPrice' ? 'Avg Price' : col.charAt(0).toUpperCase() + col.slice(1).replace(/([A-Z])/g, ' $1')}
+                     </label>
+                   ))}
+                </div>
+              )}
+            </div>
+          </div>
+          
           <div className="bg-fintech-card border border-fintech-border rounded-2xl shadow-xl overflow-hidden mb-12">
             <div className="overflow-x-auto no-scrollbar">
               <table className="w-full text-left border-collapse min-w-[1000px]">
                 <thead>
                   <tr className="bg-fintech-bg/50 border-b border-fintech-border text-fintech-muted text-sm uppercase tracking-wider">
-                    <th className="p-5 font-semibold w-12 text-center hidden md:table-cell">#</th>
-                    <SortableHeader label="Symbol" sortKey="symbol" />
-                    <SortableHeader label="Shares" sortKey="quantity" alignCenter />
-                    <SortableHeader label="Avg Price" sortKey="avgBuyPrice" alignRight />
-                    <SortableHeader label="Current Price" sortKey="currentPrice" alignRight />
-                    <SortableHeader label="Market Value" sortKey="marketValue" alignRight />
-                    <SortableHeader label="Unrealized P/L" sortKey="unrealizedPL" alignRight />
-                    <SortableHeader label="Div Yield" sortKey="yieldPct" alignRight className="hidden md:table-cell" />
-                    <SortableHeader label="Sector" sortKey="sector" className="hidden md:table-cell" />
-                    <SortableHeader label="Industry" sortKey="industry" />
-                    <th className="p-5 font-semibold text-center">Actions</th>
+                    {visibleColumns.index && <th className="p-5 font-semibold w-12 text-center hidden md:table-cell">#</th>}
+                    {visibleColumns.symbol && <SortableHeader label="Symbol" sortKey="symbol" />}
+                    {visibleColumns.quantity && <SortableHeader label="Shares" sortKey="quantity" alignCenter />}
+                    {visibleColumns.avgBuyPrice && <SortableHeader label="Avg Price" sortKey="avgBuyPrice" alignRight />}
+                    {visibleColumns.currentPrice && <SortableHeader label="Current Price" sortKey="currentPrice" alignRight />}
+                    {visibleColumns.marketValue && <SortableHeader label="Market Value" sortKey="marketValue" alignRight />}
+                    {visibleColumns.unrealizedPL && <SortableHeader label="Unrealized P/L" sortKey="unrealizedPL" alignRight />}
+                    {visibleColumns.yieldPct && <SortableHeader label="Div Yield" sortKey="yieldPct" alignRight className="hidden md:table-cell" />}
+                    {visibleColumns.sector && <SortableHeader label="Sector" sortKey="sector" className="hidden md:table-cell" />}
+                    {visibleColumns.industry && <SortableHeader label="Industry" sortKey="industry" />}
+                    {visibleColumns.actions && <th className="p-5 font-semibold text-center">Actions</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-fintech-border">
                     {sortedHoldings.length === 0 ? (
                       <tr>
-                        <td colSpan={11} className="p-8 text-center text-fintech-muted">
+                        <td colSpan={Object.values(visibleColumns).filter(v => v).length} className="p-8 text-center text-fintech-muted">
                           No holdings found. Click &quot;New Stock&quot; to start tracking.
                         </td>
                       </tr>
@@ -775,42 +823,42 @@ export default function Dashboard() {
                             className={`hover:bg-fintech-bg/30 transition-colors group/row cursor-pointer ${isExpanded ? 'bg-fintech-bg/10' : ''}`}
                             onClick={() => toggleRow(h.symbol)}
                           >
-                            <td className="p-5 text-center text-fintech-muted font-medium w-12 hidden md:table-cell">{i + 1}</td>
-                            <td className="p-5">
+                            {visibleColumns.index && <td className="p-5 text-center text-fintech-muted font-medium w-12 hidden md:table-cell">{i + 1}</td>}
+                            {visibleColumns.symbol && <td className="p-5">
                               <div className="font-bold" style={{ color: isRowProfit ? 'rgba(138, 255, 213, 0.8)' : 'rgba(243, 129, 129, 0.8)' }}>{h.symbol}</div>
                               <div className="text-xs text-fintech-muted opacity-80 mt-0.5">{h.name}</div>
-                            </td>
-                            <td className="p-5 text-center font-medium px-8">{hideValues ? '****' : h.quantity}</td>
-                            <td className="p-5 text-right text-fintech-muted">{hideValues ? '****' : formatCurrency(convertValue(h.avgBuyPrice, h.currency))}</td>
-                            <td className="p-5 text-right font-medium">{formatCurrency(convertValue(h.currentPrice, h.currency))}</td>
-                            <td className="p-5 text-right font-semibold text-white">
+                            </td>}
+                            {visibleColumns.quantity && <td className="p-5 text-center font-medium px-8">{hideValues ? '****' : h.quantity}</td>}
+                            {visibleColumns.avgBuyPrice && <td className="p-5 text-right text-fintech-muted">{hideValues ? '****' : formatCurrency(convertValue(h.avgBuyPrice, h.currency))}</td>}
+                            {visibleColumns.currentPrice && <td className="p-5 text-right font-medium">{formatCurrency(convertValue(h.currentPrice, h.currency))}</td>}
+                            {visibleColumns.marketValue && <td className="p-5 text-right font-semibold text-white">
                               <div className="flex flex-col items-end">
                                 <span>{hideValues ? '****' : formatCurrency(convertValue(h.marketValue || 0, h.currency))}</span>
                                 <span className="text-sm font-medium text-fintech-accent mt-0.5 tracking-wide">
                                   {totalMarketValue > 0 && h.marketValue ? ((h.marketValue / totalMarketValue) * 100).toFixed(2) : '0.00'}%
                                 </span>
                               </div>
-                            </td>
-                            <td className={`p-5 text-right font-bold ${isRowProfit ? 'text-fintech-profit' : 'text-fintech-loss'}`}>
+                            </td>}
+                            {visibleColumns.unrealizedPL && <td className={`p-5 text-right font-bold ${isRowProfit ? 'text-fintech-profit' : 'text-fintech-loss'}`}>
                               <div className="flex flex-col items-end">
                                 <span>{hideValues ? '****' : `${isRowProfit ? '+' : ''}${formatCurrency(convertValue(h.unrealizedPL || 0, h.currency))}`}</span>
                                 <span className="text-sm opacity-80">{isRowProfit ? '+' : ''}{(h.unrealizedPLPercent || 0).toFixed(2)}%</span>
                               </div>
-                            </td>
-                            <td className="p-5 text-right text-fintech-muted hidden md:table-cell">{(h.yieldPct || 0).toFixed(2)}%</td>
-                            <td className="p-5 text-sm text-fintech-muted truncate max-w-[130px] hidden md:table-cell" title={h.sector}>{h.sector || 'Unknown'}</td>
-                            <td className="p-5 text-sm text-fintech-muted truncate max-w-[130px]" title={h.industry}>{h.industry || 'Unknown'}</td>
-                            <td className="p-5 text-center text-fintech-muted">
+                            </td>}
+                            {visibleColumns.yieldPct && <td className="p-5 text-right text-fintech-muted hidden md:table-cell">{(h.yieldPct || 0).toFixed(2)}%</td>}
+                            {visibleColumns.sector && <td className="p-5 text-sm text-fintech-muted truncate max-w-[130px] hidden md:table-cell" title={h.sector}>{h.sector || 'Unknown'}</td>}
+                            {visibleColumns.industry && <td className="p-5 text-sm text-fintech-muted truncate max-w-[130px]" title={h.industry}>{h.industry || 'Unknown'}</td>}
+                            {visibleColumns.actions && <td className="p-5 text-center text-fintech-muted">
                               <button className="p-2 rounded-full hover:bg-fintech-border transition-colors">
                                 {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                               </button>
-                            </td>
+                            </td>}
                           </tr>
 
                           {/* Expanded Transaction Ledger Row */}
                           {isExpanded && (
                             <tr className="bg-fintech-bg/50 border-b border-fintech-border">
-                              <td colSpan={11} className="p-6">
+                              <td colSpan={Object.values(visibleColumns).filter(v => v).length} className="p-6">
                                 <div className="rounded-xl border border-fintech-border bg-fintech-card overflow-hidden">
                                   {/* Sub-table Header */}
                                   <div className="bg-slate-800/50 px-4 py-3 border-b border-fintech-border flex justify-between items-center">
