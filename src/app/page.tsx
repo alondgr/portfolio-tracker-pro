@@ -1060,7 +1060,7 @@ export default function Dashboard() {
                 Columns <ChevronDown size={14} />
               </button>
               {showColumnDropdown && (
-                <div className="absolute right-0 mt-2 w-48 bg-slate-900 border border-fintech-border rounded-xl shadow-2xl z-50 p-2">
+                <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-48 bg-slate-900 border border-fintech-border rounded-xl shadow-2xl z-50 p-2 max-h-80 overflow-y-auto">
                    {Object.keys(visibleColumns).map(col => (
                      <label key={col} className="flex items-center gap-2 p-2 hover:bg-slate-800 rounded cursor-pointer text-sm text-slate-300">
                        <input 
@@ -1094,12 +1094,14 @@ export default function Dashboard() {
                     {visibleColumns.sector && <SortableHeader label="Sector" sortKey="sector" className="hidden md:table-cell" />}
                     {visibleColumns.industry && <SortableHeader label="Industry" sortKey="industry" />}
                     {visibleColumns.actions && <th className="p-5 font-semibold text-center">Actions</th>}
+                    {/* Spacer column to push content left */}
+                    <th className="w-full"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-fintech-border">
                     {sortedHoldings.length === 0 ? (
                       <tr>
-                        <td colSpan={Object.values(visibleColumns).filter(v => v).length} className="p-8 text-center text-fintech-muted">
+                        <td colSpan={100} className="p-8 text-center text-fintech-muted">
                           No holdings found. Click &quot;New Stock&quot; to start tracking.
                         </td>
                       </tr>
@@ -1151,12 +1153,13 @@ export default function Dashboard() {
                                 {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                               </button>
                             </td>}
+                            <td className="w-full"></td>
                           </tr>
 
                           {/* Expanded Transaction Ledger Row */}
                           {isExpanded && (
                             <tr className="bg-fintech-bg/50 border-b border-fintech-border">
-                              <td colSpan={Object.values(visibleColumns).filter(v => v).length} className="p-6">
+                              <td colSpan={100} className="p-6">
                                 <div className="rounded-xl border border-fintech-border bg-fintech-card overflow-hidden">
                                   {/* Sub-table Header */}
                                   <div className="bg-slate-800/50 px-4 py-3 border-b border-fintech-border flex justify-between items-center">
