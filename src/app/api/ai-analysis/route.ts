@@ -27,7 +27,7 @@ export async function POST(request: Request) {
         const profile = summary.assetProfile || {};
         const price = summary.price || {};
 
-        let score = 50; // Base score
+        let score = 50; // GARP base score
         let reasons = [];
         
         const currentPrice = financialData.currentPrice || price.regularMarketPrice || 0;
@@ -37,6 +37,7 @@ export async function POST(request: Request) {
           upsidePct = (targetPrice - currentPrice) / currentPrice;
         }
 
+        // ================= ENGINE 1: GARP SCORING =================
         // Profitability (Long term survival)
         if (financialData.operatingMargins > 0.2) {
           score += 10;
@@ -89,29 +90,105 @@ export async function POST(request: Request) {
           reasons.push(`Sector tailwinds in ${sector} favor 5-year outperformance.`);
         }
 
+        const garpScore = Math.min(Math.max(score, 10), 99);
+
+        // ================= ENGINE 2: MOAT FORTRESS SCORING =================
+        let moatScore = 50; // Moat base score
+        let moatReasons = [];
+
+        // FCF Yield
+        const marketCap = price.marketCap || 0;
+        const fcf = financialData.freeCashflow || keyStats.freeCashflow || 0;
+        if (marketCap > 0 && fcf > 0) {
+          const fcfYield = fcf / marketCap;
+          if (fcfYield > 0.08) {
+            moatScore += 20;
+            moatReasons.push("Exceptional Free Cash Flow yield (>8%) offering a massive cash safety buffer.");
+          } else if (fcfYield > 0.05) {
+            moatScore += 10;
+            moatReasons.push("Strong cash-generative business model.");
+          }
+        } else if (fcf < 0) {
+          moatScore -= 10;
+          moatReasons.push("Negative Free Cash Flow indicates operational burn risk.");
+        }
+
+        // Debt to Equity
+        const debtToEquity = financialData.debtToEquity || 0;
+        if (debtToEquity > 0) {
+          if (debtToEquity < 50) {
+            moatScore += 10;
+            moatReasons.push("Highly conservative leverage profile (Debt/Equity < 50%).");
+          } else if (debtToEquity < 100) {
+            moatScore += 5;
+          } else if (debtToEquity > 200) {
+            moatScore -= 15;
+            moatReasons.push("Elevated debt leverage (>200% D/E ratio) poses interest-rate risk.");
+          }
+        }
+
+        // Return on Assets (ROA)
+        const roa = financialData.returnOnAssets || 0;
+        if (roa > 0.15) {
+          moatScore += 15;
+          moatReasons.push("Superlative Return on Assets (>15%) showing legendary asset efficiency.");
+        } else if (roa > 0.08) {
+          moatScore += 10;
+          moatReasons.push("Healthy operational return efficiency.");
+        }
+
+        // Volatility / Beta
+        const beta = keyStats.beta || 1.0;
+        if (beta < 1.0) {
+          moatScore += 10;
+          moatReasons.push("Defensive, low-volatility anchor (Beta < 1.0) for market stress.");
+        } else if (beta > 1.5) {
+          moatScore -= 5;
+          moatReasons.push("High stock volatility compared to broader indices.");
+        }
+
+        // Valuation - Price to Book
+        const priceToBook = keyStats.priceToBook || 0;
+        if (priceToBook > 0) {
+          if (priceToBook < 3.0) {
+            moatScore += 10;
+            moatReasons.push("Highly attractive tangible asset valuation (P/B under 3.0).");
+          } else if (priceToBook > 12.0) {
+            moatScore -= 10;
+            moatReasons.push("Extreme valuation premium on book assets (>12x Price/Book).");
+          }
+        }
+
+        const finalMoatScore = Math.min(Math.max(moatScore, 10), 99);
+
         analysisResults.push({
           symbol,
-          score: Math.min(Math.max(score, 10), 99), // clamp between 10 and 99
-          reasons: reasons.slice(0, 2), // Keep top 2 reasons
+          garpScore,
+          moatScore: finalMoatScore,
+          garpReasons: reasons.slice(0, 2),
+          moatReasons: moatReasons.slice(0, 2),
           upsidePct,
         });
         
       } catch (e) {
         console.error(`Failed to analyze ${symbol}:`, e);
-        // Fallback score if we can't get data (e.g. for crypto or ETFs)
         analysisResults.push({
           symbol,
-          score: 50,
-          reasons: ["Insufficient deep financial data for full 5-year analysis."],
+          garpScore: 50,
+          moatScore: 50,
+          garpReasons: ["Insufficient financial data for growth analysis."],
+          moatReasons: ["Insufficient asset data for moat analysis."],
           upsidePct: 0
         });
       }
     }
 
-    // Sort by score descending, then by upside potential descending
+    // Sort by combined dynamic value or garpScore by default
     analysisResults.sort((a, b) => {
-      if (b.score !== a.score) {
-        return b.score - a.score;
+      const avgA = (a.garpScore + a.moatScore) / 2;
+      const avgB = (b.garpScore + b.moatScore) / 2;
+      if (avgB !== avgA) {
+        return avgB - avgA;
       }
       return (b.upsidePct || 0) - (a.upsidePct || 0);
     });

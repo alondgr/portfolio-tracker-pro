@@ -35,6 +35,7 @@ export default function Dashboard() {
   // AI State
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResults, setAiResults] = useState<any[]>([]);
+  const [aiModelView, setAiModelView] = useState<'garp' | 'moat' | 'confluence'>('confluence');
 
   // Portfolio Multi-Select State
   const [selectedPortfolioSymbols, setSelectedPortfolioSymbols] = useState<string[]>([]);
@@ -1343,11 +1344,35 @@ export default function Dashboard() {
 
           {/* Watchlist Section */}
           <div className="mt-12 mb-12">
-            <div className="flex justify-between items-center mb-6 border-b border-fintech-border pb-3">
-              <h3 className="text-xl font-bold text-white uppercase tracking-widest opacity-80">
-                Watchlist
-              </h3>
-              <div className="flex gap-2">
+            <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 border-b border-fintech-border pb-3 gap-4">
+              <div className="flex flex-wrap items-center gap-4">
+                <h3 className="text-xl font-bold text-white uppercase tracking-widest opacity-80">
+                  Watchlist
+                </h3>
+                {aiResults.length > 0 && (
+                  <div className="flex bg-slate-900 border border-fintech-border p-0.5 rounded-lg text-xs font-semibold">
+                    <button
+                      onClick={() => setAiModelView('confluence')}
+                      className={`px-3 py-1.5 rounded-md transition-colors ${aiModelView === 'confluence' ? 'bg-gradient-to-r from-emerald-500/20 to-indigo-500/20 border border-emerald-500/30 text-emerald-300' : 'text-fintech-muted hover:text-white'}`}
+                    >
+                      🛡️ Confluence
+                    </button>
+                    <button
+                      onClick={() => setAiModelView('garp')}
+                      className={`px-3 py-1.5 rounded-md transition-colors ${aiModelView === 'garp' ? 'bg-indigo-500/20 text-indigo-300' : 'text-fintech-muted hover:text-white'}`}
+                    >
+                      📈 GARP
+                    </button>
+                    <button
+                      onClick={() => setAiModelView('moat')}
+                      className={`px-3 py-1.5 rounded-md transition-colors ${aiModelView === 'moat' ? 'bg-purple-500/20 text-purple-300' : 'text-fintech-muted hover:text-white'}`}
+                    >
+                      🏰 Fortress Moat
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2 self-end md:self-auto">
                 <button 
                   onClick={runAiAnalysis}
                   disabled={aiLoading || watchlist.length === 0}
@@ -1368,35 +1393,127 @@ export default function Dashboard() {
                   <Plus size={16} /> <span className="hidden sm:inline">Add Symbol</span>
                 </button>
               </div>
-            </div>
+            </div>/div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {[...watchlist].sort((a, b) => {
                  if (aiResults.length > 0) {
-                   const aiRankA = aiResults.findIndex(r => r.symbol === a.symbol);
-                   const aiRankB = aiResults.findIndex(r => r.symbol === b.symbol);
+                   const aiA = aiResults.find(r => r.symbol === a.symbol);
+                   const aiB = aiResults.find(r => r.symbol === b.symbol);
                    
-                   const isTopPickA = aiRankA === 0;
-                   const isTopPickB = aiRankB === 0;
-                   
-                   if (isTopPickA && !isTopPickB) return -1;
-                   if (isTopPickB && !isTopPickA) return 1;
-                   
-                   if (a.isStarred && !b.isStarred) return -1;
-                   if (b.isStarred && !a.isStarred) return 1;
-                   
-                   const rankA = aiRankA === -1 ? 999 : aiRankA;
-                   const rankB = aiRankB === -1 ? 999 : aiRankB;
-                   
-                   return rankA - rankB;
+                   if (!aiA) return 1;
+                   if (!aiB) return -1;
+
+                   if (aiModelView === 'confluence') {
+                     const isConfluenceA = aiA.garpScore >= 75 && aiA.moatScore >= 75;
+                     const isConfluenceB = aiB.garpScore >= 75 && aiB.moatScore >= 75;
+                     
+                     if (isConfluenceA && !isConfluenceB) return -1;
+                     if (isConfluenceB && !isConfluenceA) return 1;
+                     
+                     if (a.isStarred && !b.isStarred) return -1;
+                     if (b.isStarred && !a.isStarred) return 1;
+                     
+                     const avgA = (aiA.garpScore + aiA.moatScore) / 2;
+                     const avgB = (aiB.garpScore + aiB.moatScore) / 2;
+                     
+                     if (avgB !== avgA) return avgB - avgA;
+                     return (aiB.upsidePct || 0) - (aiA.upsidePct || 0);
+                   } else if (aiModelView === 'garp') {
+                     const sortedGarp = [...aiResults].sort((x, y) => {
+                       if (y.garpScore !== x.garpScore) return y.garpScore - x.garpScore;
+                       return (y.upsidePct || 0) - (x.upsidePct || 0);
+                     });
+                     
+                     const isTopGarpA = sortedGarp[0]?.symbol === a.symbol;
+                     const isTopGarpB = sortedGarp[0]?.symbol === b.symbol;
+                     
+                     if (isTopGarpA && !isTopGarpB) return -1;
+                     if (isTopGarpB && !isTopGarpA) return 1;
+                     
+                     if (a.isStarred && !b.isStarred) return -1;
+                     if (b.isStarred && !a.isStarred) return 1;
+                     
+                     if (aiB.garpScore !== aiA.garpScore) return aiB.garpScore - aiA.garpScore;
+                     return (aiB.upsidePct || 0) - (aiA.upsidePct || 0);
+                   } else {
+                     const sortedMoat = [...aiResults].sort((x, y) => {
+                       if (y.moatScore !== x.moatScore) return y.moatScore - x.moatScore;
+                       return (y.upsidePct || 0) - (x.upsidePct || 0);
+                     });
+                     
+                     const isTopMoatA = sortedMoat[0]?.symbol === a.symbol;
+                     const isTopMoatB = sortedMoat[0]?.symbol === b.symbol;
+                     
+                     if (isTopMoatA && !isTopMoatB) return -1;
+                     if (isTopMoatB && !isTopMoatA) return 1;
+                     
+                     if (a.isStarred && !b.isStarred) return -1;
+                     if (b.isStarred && !a.isStarred) return 1;
+                     
+                     if (aiB.moatScore !== aiA.moatScore) return aiB.moatScore - aiA.moatScore;
+                     return (aiB.upsidePct || 0) - (aiA.upsidePct || 0);
+                   }
                  }
                  return (b.isStarred ? 1 : 0) - (a.isStarred ? 1 : 0);
               }).map((w, i) => {
                  const aiData = aiResults.find(r => r.symbol === w.symbol);
-                 const isTopPick = aiResults.length > 0 && aiData && aiResults[0].symbol === w.symbol;
+                 
+                 let cardBorderClass = 'border-fintech-border';
+                 let showTopPickBadge = false;
+                 let showConfluenceBadge = false;
+                 
+                 if (aiResults.length > 0 && aiData) {
+                   const isConfluence = aiData.garpScore >= 75 && aiData.moatScore >= 75;
+                   
+                   if (aiModelView === 'confluence') {
+                     if (isConfluence) {
+                       cardBorderClass = 'border-emerald-400/70 shadow-[0_0_25px_rgba(16,185,129,0.25)]';
+                       showConfluenceBadge = true;
+                     } else {
+                       const isTopAvg = aiResults[0]?.symbol === w.symbol;
+                       if (isTopAvg) {
+                         cardBorderClass = 'border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.2)]';
+                         showTopPickBadge = true;
+                       } else if (w.isStarred) {
+                         cardBorderClass = 'border-amber-400/50 shadow-[0_0_15px_rgba(251,191,36,0.1)]';
+                       }
+                     }
+                   } else if (aiModelView === 'garp') {
+                     const sortedGarp = [...aiResults].sort((x, y) => {
+                       if (y.garpScore !== x.garpScore) return y.garpScore - x.garpScore;
+                       return (y.upsidePct || 0) - (x.upsidePct || 0);
+                     });
+                     if (sortedGarp[0]?.symbol === w.symbol) {
+                       cardBorderClass = 'border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.2)]';
+                       showTopPickBadge = true;
+                     } else if (w.isStarred) {
+                       cardBorderClass = 'border-amber-400/50 shadow-[0_0_15px_rgba(251,191,36,0.1)]';
+                     }
+                   } else {
+                     const sortedMoat = [...aiResults].sort((x, y) => {
+                       if (y.moatScore !== x.moatScore) return y.moatScore - x.moatScore;
+                       return (y.upsidePct || 0) - (x.upsidePct || 0);
+                     });
+                     if (sortedMoat[0]?.symbol === w.symbol) {
+                       cardBorderClass = 'border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.2)]';
+                       showTopPickBadge = true;
+                     } else if (w.isStarred) {
+                       cardBorderClass = 'border-amber-400/50 shadow-[0_0_15px_rgba(251,191,36,0.1)]';
+                     }
+                   }
+                 } else if (w.isStarred) {
+                   cardBorderClass = 'border-amber-400/50 shadow-[0_0_15px_rgba(251,191,36,0.1)]';
+                 }
+
                  return (
-                 <div key={i} className={`bg-fintech-card border ${isTopPick ? 'border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.2)]' : w.isStarred ? 'border-amber-400/50 shadow-[0_0_15px_rgba(251,191,36,0.1)]' : 'border-fintech-border'} rounded-xl p-5 shadow-lg hover:border-fintech-accent/50 transition-colors relative group`}>
-                   {isTopPick && (
+                 <div key={i} className={`bg-fintech-card border ${cardBorderClass} rounded-xl p-5 shadow-lg hover:border-fintech-accent/50 transition-colors relative group`}>
+                   {showConfluenceBadge && (
+                      <div className="absolute -top-3 -right-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg flex items-center gap-1 border border-white/20 z-10 animate-pulse">
+                        <Sparkles size={10} /> DUAL CONFLUENCE
+                      </div>
+                   )}
+                   {showTopPickBadge && !showConfluenceBadge && (
                       <div className="absolute -top-3 -right-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg flex items-center gap-1 border border-white/20 z-10">
                         <Sparkles size={10} /> AI TOP PICK
                       </div>
@@ -1455,23 +1572,57 @@ export default function Dashboard() {
                      </div>
                    </div>
                    {aiData && (
-                     <div className="mt-4 pt-4 border-t border-fintech-border/50">
-                       <div className="flex justify-between items-center mb-2">
-                         <span className="text-xs font-semibold text-indigo-300 flex items-center gap-1"><Sparkles size={10} /> AI Score:</span>
-                         <span className={`text-xs font-bold px-2 py-0.5 rounded ${aiData.score > 70 ? 'bg-emerald-500/20 text-emerald-400' : aiData.score > 50 ? 'bg-amber-500/20 text-amber-400' : 'bg-rose-500/20 text-rose-400'}`}>
-                           {aiData.score}/100
-                         </span>
-                       </div>
-                       <ul className="text-[10px] text-fintech-muted space-y-1">
-                         {aiData.reasons.map((r: string, idx: number) => (
-                           <li key={idx} className="flex gap-1 items-start">
-                             <div className="text-indigo-400 mt-0.5">•</div>
-                             <span className="leading-tight">{r}</span>
-                           </li>
-                         ))}
-                       </ul>
-                     </div>
-                   )}
+                      <div className="mt-4 pt-4 border-t border-fintech-border/50">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-xs font-semibold text-indigo-300 flex items-center gap-1">
+                            {aiModelView === 'confluence' ? (
+                              <span className="flex items-center gap-1"><Sparkles size={10} /> AI Score:</span>
+                            ) : aiModelView === 'garp' ? (
+                              <span className="flex items-center gap-1"><TrendingUp size={10} /> GARP Score:</span>
+                            ) : (
+                              <span className="flex items-center gap-1"><Building2 size={10} /> Moat Score:</span>
+                            )}
+                          </span>
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                            (aiModelView === 'confluence' ? (aiData.garpScore + aiData.moatScore)/2 : aiModelView === 'garp' ? aiData.garpScore : aiData.moatScore) > 70 
+                              ? 'bg-emerald-500/20 text-emerald-400' 
+                              : (aiModelView === 'confluence' ? (aiData.garpScore + aiData.moatScore)/2 : aiModelView === 'garp' ? aiData.garpScore : aiData.moatScore) > 50 
+                                ? 'bg-amber-500/20 text-amber-400' 
+                                : 'bg-rose-500/20 text-rose-400'
+                          }`}>
+                            {aiModelView === 'confluence' 
+                              ? `${Math.round((aiData.garpScore + aiData.moatScore) / 2)}/100` 
+                              : aiModelView === 'garp' 
+                                ? `${aiData.garpScore}/100` 
+                                : `${aiData.moatScore}/100`}
+                          </span>
+                        </div>
+
+                        {/* Combined dashboard metrics inside card if Confluence is active */}
+                        {aiModelView === 'confluence' && (
+                          <div className="flex gap-2 mb-3 bg-slate-900/60 p-1.5 rounded-lg border border-fintech-border/30 text-[10px] text-center font-medium">
+                            <div className="flex-1">
+                              <div className="text-indigo-400 font-semibold mb-0.5">GARP</div>
+                              <div className="text-white text-[11px]">{aiData.garpScore}</div>
+                            </div>
+                            <div className="w-px bg-fintech-border/30 self-stretch" />
+                            <div className="flex-1">
+                              <div className="text-purple-400 font-semibold mb-0.5">Moat</div>
+                              <div className="text-white text-[11px]">{aiData.moatScore}</div>
+                            </div>
+                          </div>
+                        )}
+
+                        <ul className="text-[10px] text-fintech-muted space-y-1">
+                          {(aiModelView === 'moat' ? aiData.moatReasons : aiData.garpReasons).map((r: string, idx: number) => (
+                            <li key={idx} className="flex gap-1 items-start">
+                              <div className="text-indigo-400 mt-0.5">•</div>
+                              <span className="leading-tight">{r}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                  </div>
               )})}
               {watchlist.length === 0 && (
