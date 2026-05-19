@@ -58,6 +58,8 @@ export default function Dashboard() {
     actions: true
   });
 
+  const hasHiddenColumns = Object.values(visibleColumns).filter(Boolean).length < Object.keys(visibleColumns).length;
+
   // Sorting state
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
@@ -1095,8 +1097,8 @@ export default function Dashboard() {
                     {visibleColumns.sector && <SortableHeader label="Sector" sortKey="sector" className="hidden md:table-cell" />}
                     {visibleColumns.industry && <SortableHeader label="Industry" sortKey="industry" />}
                     {visibleColumns.actions && <th className="p-5 font-semibold text-center">Actions</th>}
-                    {/* Spacer column to push content left */}
-                    <th className="w-full"></th>
+                    {/* Spacer column to push content left only when some columns are hidden */}
+                    {hasHiddenColumns && <th className="w-full"></th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-fintech-border">
@@ -1154,7 +1156,7 @@ export default function Dashboard() {
                                 {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                               </button>
                             </td>}
-                            <td className="w-full"></td>
+                            {hasHiddenColumns && <td className="w-full"></td>}
                           </tr>
 
                           {/* Expanded Transaction Ledger Row */}
