@@ -782,7 +782,7 @@ export default function Dashboard() {
 
   const openHoldingsSource = holdings.filter(h => h.quantity > 0);
   const closedHoldingsSource = holdings.filter(h => h.quantity <= 0);
-  const allUniqueSymbols = Array.from(new Set([...openHoldingsSource, ...closedHoldingsSource].map(h => h.symbol))).sort();
+  const allUniqueSymbols = Array.from(new Set(openHoldingsSource.map(h => h.symbol))).sort();
 
   const filteredHoldings = selectedPortfolioSymbols.length > 0
     ? openHoldingsSource.filter(h => selectedPortfolioSymbols.includes(h.symbol))
