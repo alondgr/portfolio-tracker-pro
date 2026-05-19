@@ -62,6 +62,24 @@ export default function Dashboard() {
   const visibleCount = Object.values(visibleColumns).filter(Boolean).length;
   const hasHiddenColumns = visibleCount < totalPossibleColumns;
 
+  const getColumnStyle = (isVisible: boolean, baseMinWidth: string = '80px', baseWidth: string = 'auto') => {
+    return {
+      width: isVisible ? baseWidth : '0px',
+      minWidth: isVisible ? baseMinWidth : '0px',
+      maxWidth: isVisible ? '500px' : '0px',
+      opacity: isVisible ? 1 : 0,
+      paddingLeft: isVisible ? '20px' : '0px',
+      paddingRight: isVisible ? '20px' : '0px',
+      paddingTop: isVisible ? '20px' : '0px',
+      paddingBottom: isVisible ? '20px' : '0px',
+      overflow: 'hidden',
+      whiteSpace: 'nowrap' as const,
+      pointerEvents: isVisible ? ('auto' as const) : ('none' as const),
+      transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+      borderWidth: isVisible ? '' : '0px'
+    };
+  };
+
   // Sorting state
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
@@ -844,10 +862,11 @@ export default function Dashboard() {
     }))
   ];
 
-  const SortableHeader = ({ label, sortKey, alignRight = false, alignCenter = false, className = "" }: { label: string, sortKey: string, alignRight?: boolean, alignCenter?: boolean, className?: string }) => {
+  const SortableHeader = ({ label, sortKey, alignRight = false, alignCenter = false, className = "", style = {} }: { label: string, sortKey: string, alignRight?: boolean, alignCenter?: boolean, className?: string, style?: React.CSSProperties }) => {
     return (
       <th
-        className={`p-5 font-semibold cursor-pointer select-none group hover:text-white transition-colors ${alignRight ? 'text-right' : alignCenter ? 'text-center' : ''} ${className}`}
+        className={`font-semibold cursor-pointer select-none group hover:text-white transition-colors ${alignRight ? 'text-right' : alignCenter ? 'text-center' : ''} ${className}`}
+        style={style}
         onClick={() => requestSort(sortKey)}
       >
         <div className={`flex items-center gap-1 ${alignRight ? 'justify-end' : alignCenter ? 'justify-center' : ''}`}>
@@ -1093,18 +1112,18 @@ export default function Dashboard() {
               >
                 <thead>
                   <tr className="bg-fintech-bg/50 border-b border-fintech-border text-fintech-muted text-sm uppercase tracking-wider">
-                    {visibleColumns.index && <th className="p-5 font-semibold w-12 text-center hidden md:table-cell">#</th>}
-                    {visibleColumns.symbol && <SortableHeader label="Symbol" sortKey="symbol" />}
-                    {visibleColumns.quantity && <SortableHeader label="Shares" sortKey="quantity" alignCenter />}
-                    {visibleColumns.avgBuyPrice && <SortableHeader label="Avg Price" sortKey="avgBuyPrice" alignRight />}
-                    {visibleColumns.currentPrice && <SortableHeader label="Current Price" sortKey="currentPrice" alignRight />}
-                    {visibleColumns.marketValue && <SortableHeader label="Market Value" sortKey="marketValue" alignRight />}
-                    {visibleColumns.dailyChange && <SortableHeader label="Daily Change" sortKey="dailyChange" alignRight />}
-                    {visibleColumns.unrealizedPL && <SortableHeader label="Unrealized P/L" sortKey="unrealizedPL" alignRight />}
-                    {visibleColumns.yieldPct && <SortableHeader label="Div Yield" sortKey="yieldPct" alignRight className="hidden md:table-cell" />}
-                    {visibleColumns.sector && <SortableHeader label="Sector" sortKey="sector" className="hidden md:table-cell" />}
-                    {visibleColumns.industry && <SortableHeader label="Industry" sortKey="industry" />}
-                    {visibleColumns.actions && <th className="p-5 font-semibold text-center">Actions</th>}
+                    <th style={getColumnStyle(visibleColumns.index, '48px', '48px')} className="font-semibold text-center hidden md:table-cell">#</th>
+                    <SortableHeader label="Symbol" sortKey="symbol" style={getColumnStyle(visibleColumns.symbol, '100px')} />
+                    <SortableHeader label="Shares" sortKey="quantity" alignCenter style={getColumnStyle(visibleColumns.quantity, '100px')} />
+                    <SortableHeader label="Avg Price" sortKey="avgBuyPrice" alignRight style={getColumnStyle(visibleColumns.avgBuyPrice, '120px')} />
+                    <SortableHeader label="Current Price" sortKey="currentPrice" alignRight style={getColumnStyle(visibleColumns.currentPrice, '120px')} />
+                    <SortableHeader label="Market Value" sortKey="marketValue" alignRight style={getColumnStyle(visibleColumns.marketValue, '140px')} />
+                    <SortableHeader label="Daily Change" sortKey="dailyChange" alignRight style={getColumnStyle(visibleColumns.dailyChange, '140px')} />
+                    <SortableHeader label="Unrealized P/L" sortKey="unrealizedPL" alignRight style={getColumnStyle(visibleColumns.unrealizedPL, '140px')} />
+                    <SortableHeader label="Div Yield" sortKey="yieldPct" alignRight className="hidden md:table-cell" style={getColumnStyle(visibleColumns.yieldPct, '100px')} />
+                    <SortableHeader label="Sector" sortKey="sector" className="hidden md:table-cell" style={getColumnStyle(visibleColumns.sector, '150px')} />
+                    <SortableHeader label="Industry" sortKey="industry" style={getColumnStyle(visibleColumns.industry, '150px')} />
+                    <th style={getColumnStyle(visibleColumns.actions, '80px')} className="font-semibold text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-fintech-border">
@@ -1126,42 +1145,42 @@ export default function Dashboard() {
                             className={`hover:bg-fintech-bg/30 transition-colors group/row cursor-pointer ${isExpanded ? 'bg-fintech-bg/10' : ''}`}
                             onClick={() => toggleRow(h.symbol)}
                           >
-                            {visibleColumns.index && <td className="p-5 text-center text-fintech-muted font-medium w-12 hidden md:table-cell">{i + 1}</td>}
-                            {visibleColumns.symbol && <td className="p-5">
+                            <td style={getColumnStyle(visibleColumns.index, '48px', '48px')} className="text-center text-fintech-muted font-medium hidden md:table-cell">{i + 1}</td>
+                            <td style={getColumnStyle(visibleColumns.symbol, '100px')} className="">
                               <div className="font-bold" style={{ color: isRowProfit ? 'rgba(138, 255, 213, 0.8)' : 'rgba(243, 129, 129, 0.8)' }}>{h.symbol}</div>
                               <div className="text-xs text-fintech-muted opacity-80 mt-0.5">{h.name}</div>
-                            </td>}
-                            {visibleColumns.quantity && <td className="p-5 text-center font-medium px-8">{hideValues ? '****' : h.quantity}</td>}
-                            {visibleColumns.avgBuyPrice && <td className="p-5 text-right text-fintech-muted">{hideValues ? '****' : formatCurrency(convertValue(h.avgBuyPrice, h.currency))}</td>}
-                            {visibleColumns.currentPrice && <td className="p-5 text-right font-medium">{formatCurrency(convertValue(h.currentPrice, h.currency))}</td>}
-                            {visibleColumns.marketValue && <td className="p-5 text-right font-semibold text-white">
+                            </td>
+                            <td style={getColumnStyle(visibleColumns.quantity, '100px')} className="text-center font-medium">{hideValues ? '****' : h.quantity}</td>
+                            <td style={getColumnStyle(visibleColumns.avgBuyPrice, '120px')} className="text-right text-fintech-muted">{hideValues ? '****' : formatCurrency(convertValue(h.avgBuyPrice, h.currency))}</td>
+                            <td style={getColumnStyle(visibleColumns.currentPrice, '120px')} className="text-right font-medium">{formatCurrency(convertValue(h.currentPrice, h.currency))}</td>
+                            <td style={getColumnStyle(visibleColumns.marketValue, '140px')} className="text-right font-semibold text-white">
                               <div className="flex flex-col items-end">
                                 <span>{hideValues ? '****' : formatCurrency(convertValue(h.marketValue || 0, h.currency))}</span>
                                 <span className="text-sm font-medium text-fintech-accent mt-0.5 tracking-wide">
                                   {totalMarketValue > 0 && h.marketValue ? ((h.marketValue / totalMarketValue) * 100).toFixed(2) : '0.00'}%
                                 </span>
                               </div>
-                            </td>}
-                            {visibleColumns.dailyChange && <td className={`p-5 text-right font-bold ${(h.dailyChange || 0) >= 0 ? 'text-fintech-profit' : 'text-fintech-loss'}`}>
+                            </td>
+                            <td style={getColumnStyle(visibleColumns.dailyChange, '140px')} className={`text-right font-bold ${(h.dailyChange || 0) >= 0 ? 'text-fintech-profit' : 'text-fintech-loss'}`}>
                               <div className="flex flex-col items-end">
                                 <span>{hideValues ? '****' : `${(h.dailyChange || 0) >= 0 ? '+' : ''}${formatCurrency(convertValue((h.dailyChange || 0) * h.quantity, h.currency))}`}</span>
                                 <span className="text-sm opacity-80">{(h.dailyChangePct || 0) >= 0 ? '+' : ''}{(h.dailyChangePct || 0).toFixed(2)}%</span>
                               </div>
-                            </td>}
-                            {visibleColumns.unrealizedPL && <td className={`p-5 text-right font-bold ${isRowProfit ? 'text-fintech-profit' : 'text-fintech-loss'}`}>
+                            </td>
+                            <td style={getColumnStyle(visibleColumns.unrealizedPL, '140px')} className={`text-right font-bold ${isRowProfit ? 'text-fintech-profit' : 'text-fintech-loss'}`}>
                               <div className="flex flex-col items-end">
                                 <span>{hideValues ? '****' : `${isRowProfit ? '+' : ''}${formatCurrency(convertValue(h.unrealizedPL || 0, h.currency))}`}</span>
                                 <span className="text-sm opacity-80">{isRowProfit ? '+' : ''}{(h.unrealizedPLPercent || 0).toFixed(2)}%</span>
                               </div>
-                            </td>}
-                            {visibleColumns.yieldPct && <td className="p-5 text-right text-fintech-muted hidden md:table-cell">{(h.yieldPct || 0).toFixed(2)}%</td>}
-                            {visibleColumns.sector && <td className="p-5 text-sm text-fintech-muted truncate max-w-[130px] hidden md:table-cell" title={h.sector}>{h.sector || 'Unknown'}</td>}
-                            {visibleColumns.industry && <td className="p-5 text-sm text-fintech-muted truncate max-w-[130px]" title={h.industry}>{h.industry || 'Unknown'}</td>}
-                            {visibleColumns.actions && <td className="p-5 text-center text-fintech-muted">
+                            </td>
+                            <td style={getColumnStyle(visibleColumns.yieldPct, '100px')} className="text-right text-fintech-muted hidden md:table-cell">{(h.yieldPct || 0).toFixed(2)}%</td>
+                            <td style={getColumnStyle(visibleColumns.sector, '150px')} className="text-sm text-fintech-muted truncate max-w-[130px] hidden md:table-cell" title={h.sector}>{h.sector || 'Unknown'}</td>
+                            <td style={getColumnStyle(visibleColumns.industry, '150px')} className="text-sm text-fintech-muted truncate max-w-[130px]" title={h.industry}>{h.industry || 'Unknown'}</td>
+                            <td style={getColumnStyle(visibleColumns.actions, '80px')} className="text-center text-fintech-muted">
                               <button className="p-2 rounded-full hover:bg-fintech-border transition-colors">
                                 {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                               </button>
-                            </td>}
+                            </td>
                           </tr>
 
                           {/* Expanded Transaction Ledger Row */}
