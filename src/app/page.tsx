@@ -58,7 +58,9 @@ export default function Dashboard() {
     actions: true
   });
 
-  const hasHiddenColumns = Object.values(visibleColumns).filter(Boolean).length < Object.keys(visibleColumns).length;
+  const totalPossibleColumns = Object.keys(visibleColumns).length;
+  const visibleCount = Object.values(visibleColumns).filter(Boolean).length;
+  const hasHiddenColumns = visibleCount < totalPossibleColumns;
 
   // Sorting state
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
@@ -1082,7 +1084,13 @@ export default function Dashboard() {
           
           <div className="bg-fintech-card border border-fintech-border rounded-2xl shadow-xl overflow-hidden mb-12">
             <div className="overflow-x-auto no-scrollbar">
-              <table className="w-full text-left border-collapse min-w-[1000px]">
+              <table 
+                className="text-left border-collapse transition-all duration-300"
+                style={{
+                  width: `${(visibleCount / totalPossibleColumns) * 100}%`,
+                  minWidth: `${Math.max(600, Math.round((visibleCount / totalPossibleColumns) * 1000))}px`
+                }}
+              >
                 <thead>
                   <tr className="bg-fintech-bg/50 border-b border-fintech-border text-fintech-muted text-sm uppercase tracking-wider">
                     {visibleColumns.index && <th className="p-5 font-semibold w-12 text-center hidden md:table-cell">#</th>}
@@ -1097,8 +1105,6 @@ export default function Dashboard() {
                     {visibleColumns.sector && <SortableHeader label="Sector" sortKey="sector" className="hidden md:table-cell" />}
                     {visibleColumns.industry && <SortableHeader label="Industry" sortKey="industry" />}
                     {visibleColumns.actions && <th className="p-5 font-semibold text-center">Actions</th>}
-                    {/* Spacer column to push content left only when some columns are hidden */}
-                    {hasHiddenColumns && <th className="w-full"></th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-fintech-border">
@@ -1156,7 +1162,6 @@ export default function Dashboard() {
                                 {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                               </button>
                             </td>}
-                            {hasHiddenColumns && <td className="w-full"></td>}
                           </tr>
 
                           {/* Expanded Transaction Ledger Row */}
