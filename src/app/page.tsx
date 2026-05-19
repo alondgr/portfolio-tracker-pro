@@ -1123,7 +1123,7 @@ export default function Dashboard() {
                     <SortableHeader label="Div Yield" sortKey="yieldPct" alignRight className="hidden md:table-cell" style={getColumnStyle(visibleColumns.yieldPct, '100px')} />
                     <SortableHeader label="Sector" sortKey="sector" className="hidden md:table-cell" style={getColumnStyle(visibleColumns.sector, '150px')} />
                     <SortableHeader label="Industry" sortKey="industry" style={getColumnStyle(visibleColumns.industry, '150px')} />
-                    <th style={getColumnStyle(visibleColumns.actions, '80px')} className="font-semibold text-center">Actions</th>
+                    <th style={getColumnStyle(visibleColumns.actions, '80px')} className="font-semibold text-center sticky right-0 bg-fintech-card border-l border-fintech-border z-10">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-fintech-border">
@@ -1176,7 +1176,7 @@ export default function Dashboard() {
                             <td style={getColumnStyle(visibleColumns.yieldPct, '100px')} className="text-right text-fintech-muted hidden md:table-cell">{(h.yieldPct || 0).toFixed(2)}%</td>
                             <td style={getColumnStyle(visibleColumns.sector, '150px')} className="text-sm text-fintech-muted truncate max-w-[130px] hidden md:table-cell" title={h.sector}>{h.sector || 'Unknown'}</td>
                             <td style={getColumnStyle(visibleColumns.industry, '150px')} className="text-sm text-fintech-muted truncate max-w-[130px]" title={h.industry}>{h.industry || 'Unknown'}</td>
-                            <td style={getColumnStyle(visibleColumns.actions, '80px')} className="text-center text-fintech-muted">
+                            <td style={getColumnStyle(visibleColumns.actions, '80px')} className="text-center text-fintech-muted sticky right-0 bg-fintech-card border-l border-fintech-border z-10">
                               <button className="p-2 rounded-full hover:bg-fintech-border transition-colors">
                                 {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                               </button>
