@@ -52,9 +52,9 @@ export default function Dashboard() {
     marketValue: true,
     dailyChange: true,
     unrealizedPL: true,
-    yieldPct: true,
-    sector: true,
-    industry: true,
+    yieldPct: false,
+    sector: false,
+    industry: false,
     actions: true
   });
 
@@ -621,7 +621,7 @@ export default function Dashboard() {
     return CHART_COLORS[(index + 3) % CHART_COLORS.length];
   };
 
-  const handleEditTransactionSubmit = async (e: React.FormEvent, symbol: string) => {
+  const handleEditTransactionSubmit = async (e: React.FormEvent | React.MouseEvent, symbol: string) => {
     e.preventDefault();
     setSubmitLoading(true);
     try {
@@ -1192,7 +1192,18 @@ export default function Dashboard() {
                                   <div className="bg-slate-800/50 px-4 py-3 border-b border-fintech-border flex justify-between items-center">
                                     <h4 className="text-sm font-semibold text-fintech-text tracking-wide uppercase">Transaction Ledger: {h.symbol}</h4>
                                     <button
-                                      onClick={(e) => { e.stopPropagation(); setTxnFormActiveSymbol(txnFormActiveSymbol === h.symbol ? null : h.symbol); }}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (txnFormActiveSymbol === h.symbol) {
+                                          setTxnFormActiveSymbol(null);
+                                        } else {
+                                          setTxnFormActiveSymbol(h.symbol);
+                                          setTxnForm(prev => ({
+                                            ...prev,
+                                            price: h.currentPrice ? h.currentPrice.toString() : ''
+                                          }));
+                                        }
+                                      }}
                                       className="text-xs font-medium px-3 py-1.5 rounded-lg bg-fintech-accent/20 text-fintech-accent hover:bg-fintech-accent/30 transition-colors"
                                     >
                                       {txnFormActiveSymbol === h.symbol ? 'Cancel' : '+ Add Record'}
@@ -1720,7 +1731,18 @@ export default function Dashboard() {
                                     <div className="bg-slate-800/30 px-4 py-3 border-b border-fintech-border flex justify-between items-center opacity-80">
                                       <h4 className="text-sm font-semibold text-fintech-text tracking-wide uppercase">Transaction Ledger: {h.symbol}</h4>
                                       <button
-                                        onClick={(e) => { e.stopPropagation(); setTxnFormActiveSymbol(txnFormActiveSymbol === h.symbol ? null : h.symbol); }}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (txnFormActiveSymbol === h.symbol) {
+                                            setTxnFormActiveSymbol(null);
+                                          } else {
+                                            setTxnFormActiveSymbol(h.symbol);
+                                            setTxnForm(prev => ({
+                                              ...prev,
+                                              price: h.currentPrice ? h.currentPrice.toString() : ''
+                                            }));
+                                          }
+                                        }}
                                         className="text-xs font-medium px-3 py-1.5 rounded-lg bg-fintech-accent/10 text-fintech-accent hover:bg-fintech-accent/20 transition-colors"
                                       >
                                         + Log Trade
@@ -1742,7 +1764,7 @@ export default function Dashboard() {
                                           {txnFormActiveSymbol === h.symbol && (
                                             <tr className="bg-fintech-bg/80 animate-in fade-in slide-in-from-top-2 duration-200">
                                               <td colSpan={6} className="p-4 border-b border-fintech-accent/20">
-                                                <form className="flex gap-4 items-end max-w-3xl" onSubmit={(e) => { e.preventDefault(); handleTxnSubmit(h.symbol); }}>
+                                                <form className="flex gap-4 items-end max-w-3xl" onSubmit={(e) => handleAddTransaction(e, h.symbol)}>
                                                   <div className="flex-1 min-w-[120px]">
                                                     <label className="block text-xs font-medium text-fintech-muted mb-1">Type</label>
                                                     <select
@@ -1817,7 +1839,7 @@ export default function Dashboard() {
                                                   <td className="py-2 px-4 text-center">
                                                     <div className="flex gap-1 justify-center">
                                                       <button onClick={() => setEditingTxnId(null)} className="text-slate-500 hover:text-white px-1">✕</button>
-                                                      <button onClick={() => handleEditSubmit(h.symbol, t.id)} className="text-fintech-accent hover:text-blue-400 font-bold px-1">✓</button>
+                                                      <button onClick={(e) => handleEditTransactionSubmit(e, h.symbol)} className="text-fintech-accent hover:text-blue-400 font-bold px-1">✓</button>
                                                     </div>
                                                   </td>
                                                 </tr>
