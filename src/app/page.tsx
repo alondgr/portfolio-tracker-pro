@@ -1106,7 +1106,7 @@ export default function Dashboard() {
               <table 
                 className="text-left border-collapse transition-all duration-300"
                 style={{
-                  width: `${(visibleCount / totalPossibleColumns) * 100}%`,
+                  width: '100%',
                   minWidth: `${Math.max(600, Math.round((visibleCount / totalPossibleColumns) * 1000))}px`
                 }}
               >
