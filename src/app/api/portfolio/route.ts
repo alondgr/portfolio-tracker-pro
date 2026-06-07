@@ -109,12 +109,16 @@ export async function GET() {
       let sector = "Unknown";
       let industry = "Unknown";
       let yieldPct = 0;
+      let exDividendDate = null;
+      let dividendDate = null;
       
       try {
-        const summary = (await yahooFinance.quoteSummary(holding.symbol, { modules: ['assetProfile', 'summaryDetail'] })) as any;
+        const summary = (await yahooFinance.quoteSummary(holding.symbol, { modules: ['assetProfile', 'summaryDetail', 'calendarEvents'] })) as any;
         sector = summary.assetProfile?.sector || "Unknown";
         industry = summary.assetProfile?.industry || "Unknown";
         yieldPct = summary.summaryDetail?.dividendYield ? summary.summaryDetail.dividendYield * 100 : 0;
+        exDividendDate = summary.summaryDetail?.exDividendDate || summary.calendarEvents?.exDividendDate || null;
+        dividendDate = summary.calendarEvents?.dividendDate || null;
       } catch (e) {
         console.log(`Failed fetching assetProfile for ${holding.symbol}`);
       }
@@ -138,6 +142,8 @@ export async function GET() {
         dailyChange,
         dailyChangePct,
         yieldPct,
+        exDividendDate,
+        dividendDate,
         sector,
         industry,
       };

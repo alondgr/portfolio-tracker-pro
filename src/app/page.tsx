@@ -1173,7 +1173,15 @@ export default function Dashboard() {
                                 <span className="text-sm opacity-80">{isRowProfit ? '+' : ''}{(h.unrealizedPLPercent || 0).toFixed(2)}%</span>
                               </div>
                             </td>
-                            <td style={getColumnStyle(visibleColumns.yieldPct, '100px')} className="text-right text-fintech-muted hidden md:table-cell">{(h.yieldPct || 0).toFixed(2)}%</td>
+                            <td style={getColumnStyle(visibleColumns.yieldPct, '100px')} className="text-right hidden md:table-cell">
+                              <div className="text-fintech-muted">{(h.yieldPct || 0).toFixed(2)}%</div>
+                              {(h.exDividendDate || h.dividendDate) && (
+                                <div className="text-[10px] text-fintech-muted flex flex-col mt-1 items-end opacity-80">
+                                  {h.exDividendDate && <span>Ex: {new Date(h.exDividendDate).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}</span>}
+                                  {h.dividendDate && <span>Pay: {new Date(h.dividendDate).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}</span>}
+                                </div>
+                              )}
+                            </td>
                             <td style={getColumnStyle(visibleColumns.sector, '150px')} className="text-sm text-fintech-muted truncate max-w-[130px] hidden md:table-cell" title={h.sector}>{h.sector || 'Unknown'}</td>
                             <td style={getColumnStyle(visibleColumns.industry, '150px')} className="text-sm text-fintech-muted truncate max-w-[130px]" title={h.industry}>{h.industry || 'Unknown'}</td>
                             <td style={getColumnStyle(visibleColumns.actions, '80px')} className="text-center text-fintech-muted sticky right-0 bg-fintech-card border-l border-fintech-border z-10">
