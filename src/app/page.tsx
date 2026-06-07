@@ -1120,8 +1120,8 @@ export default function Dashboard() {
                     <SortableHeader label="Market Value" sortKey="marketValue" alignRight style={getColumnStyle(visibleColumns.marketValue, '140px')} />
                     <SortableHeader label="Daily Change" sortKey="dailyChange" alignRight style={getColumnStyle(visibleColumns.dailyChange, '140px')} />
                     <SortableHeader label="Unrealized P/L" sortKey="unrealizedPL" alignRight style={getColumnStyle(visibleColumns.unrealizedPL, '140px')} />
-                    <SortableHeader label="Div Yield" sortKey="yieldPct" alignRight className="hidden md:table-cell" style={getColumnStyle(visibleColumns.yieldPct, '100px')} />
-                    <SortableHeader label="Sector" sortKey="sector" className="hidden md:table-cell" style={getColumnStyle(visibleColumns.sector, '150px')} />
+                    <SortableHeader label="Div Yield" sortKey="yieldPct" alignRight style={getColumnStyle(visibleColumns.yieldPct, '100px')} />
+                    <SortableHeader label="Sector" sortKey="sector" style={getColumnStyle(visibleColumns.sector, '150px')} />
                     <SortableHeader label="Industry" sortKey="industry" style={getColumnStyle(visibleColumns.industry, '150px')} />
                     <th style={getColumnStyle(visibleColumns.actions, '80px')} className="font-semibold text-center sticky right-0 bg-fintech-card border-l border-fintech-border z-10">Actions</th>
                   </tr>
@@ -1173,7 +1173,7 @@ export default function Dashboard() {
                                 <span className="text-sm opacity-80">{isRowProfit ? '+' : ''}{(h.unrealizedPLPercent || 0).toFixed(2)}%</span>
                               </div>
                             </td>
-                            <td style={getColumnStyle(visibleColumns.yieldPct, '100px')} className="text-right hidden md:table-cell">
+                            <td style={getColumnStyle(visibleColumns.yieldPct, '100px')} className="text-right">
                               <div className="text-fintech-muted">{(h.yieldPct || 0).toFixed(2)}%</div>
                               {(h.exDividendDate || h.dividendDate) && (
                                 <div className="text-[10px] text-fintech-muted flex flex-col mt-1 items-end opacity-80">
@@ -1182,7 +1182,7 @@ export default function Dashboard() {
                                 </div>
                               )}
                             </td>
-                            <td style={getColumnStyle(visibleColumns.sector, '150px')} className="text-sm text-fintech-muted truncate max-w-[130px] hidden md:table-cell" title={h.sector}>{h.sector || 'Unknown'}</td>
+                            <td style={getColumnStyle(visibleColumns.sector, '150px')} className="text-sm text-fintech-muted truncate max-w-[130px]" title={h.sector}>{h.sector || 'Unknown'}</td>
                             <td style={getColumnStyle(visibleColumns.industry, '150px')} className="text-sm text-fintech-muted truncate max-w-[130px]" title={h.industry}>{h.industry || 'Unknown'}</td>
                             <td style={getColumnStyle(visibleColumns.actions, '80px')} className="text-center text-fintech-muted sticky right-0 bg-fintech-card border-l border-fintech-border z-10">
                               <button className="p-2 rounded-full hover:bg-fintech-border transition-colors">
