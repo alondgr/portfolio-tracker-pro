@@ -17,6 +17,22 @@ const CHART_COLORS = [
   '#EAB308', '#84CC16', '#22C55E', '#0EA5E9', '#D946EF', '#9333EA', '#F97316', '#EF4444', '#10B981'
 ];
 
+const COMPANY_EXPLANATIONS: Record<string, string> = {
+  STRC: "High-yield preferred stock backed by massive corporate dollar and Bitcoin reserves. It delivers elite, predictable cash flow independent of traditional market indices.",
+  NVDA: "The premier architect of advanced AI microchips. They design the complex intellectual brainpower fueling the global artificial intelligence, data center, and computing revolution.",
+  PLTR: "Elite data-analytics software provider securing critical military defense operations and massive corporate enterprise infrastructure. Their sticky government contracts create an ironclad economic moat.",
+  COIN: "The leading regulated cryptocurrency exchange. It operates as the primary institutional gateway capturing massive transaction fees on mainstream digital asset volume.",
+  CRCL: "Stablecoin pioneer issuing USDC. They profit immensely by capturing high interest yields on the traditional cash reserves backing their circulating digital dollars.",
+  GOLD: "A massive senior precious metals miner. It serves as a classic physical asset hedge, protecting portfolio purchasing power against systemic inflation.",
+  OXY: "Major domestic oil and gas producer backed heavily by Warren Buffett. They capture traditional energy demand while scaling cutting-edge industrial carbon-capture tech.",
+  NEE: "The premier global green utility. It provides a rock-solid defensive shield, spinning off exceptionally safe, highly predictable dividend cash flows regardless of macro economic conditions.",
+  IRM: "A specialized real estate trust protecting physical data storage and corporate archives. Their highly secure, long-term tenant leases support a remarkably durable dividend payout.",
+  TSM: "The world's dominant semiconductor foundry. They physically manufacture the actual advanced microchips designed by big tech giants, completely controlling global hardware production infrastructure.",
+  AVGO: "An infrastructure semiconductor powerhouse. They dominate the specialized chips and networking hardware required to physically link massive AI data servers together globally.",
+  AMZN: "Unrivaled e-commerce giant structurally backed by AWS. Their high-margin cloud computing network dominance completely funds aggressive retail and next-generation logistics expansions worldwide.",
+  VRTX: "A biotech juggernaut carrying zero debt. They hold an ironclad global monopoly on life-saving cystic fibrosis therapies, generating completely recession-proof revenue."
+};
+
 
 export default function Dashboard() {
   const { user, isLoaded } = useUser();
@@ -31,6 +47,7 @@ export default function Dashboard() {
   const [watchlist, setWatchlist] = useState<any[]>([]);
   const [showWatchlistModal, setShowWatchlistModal] = useState(false);
   const [watchlistInput, setWatchlistInput] = useState('');
+  const [explanationSymbol, setExplanationSymbol] = useState<string | null>(null);
   
   // AI State
   const [aiLoading, setAiLoading] = useState(false);
@@ -1146,9 +1163,22 @@ export default function Dashboard() {
                             onClick={() => toggleRow(h.symbol)}
                           >
                             <td style={getColumnStyle(visibleColumns.index, '48px', '48px')} className="text-center text-fintech-muted font-medium hidden md:table-cell">{i + 1}</td>
-                            <td style={getColumnStyle(visibleColumns.symbol, '100px')} className="">
-                              <div className="font-bold" style={{ color: isRowProfit ? 'rgba(138, 255, 213, 0.8)' : 'rgba(243, 129, 129, 0.8)' }}>{h.symbol}</div>
-                              <div className="text-xs text-fintech-muted opacity-80 mt-0.5">{h.name}</div>
+                            <td 
+                              style={getColumnStyle(visibleColumns.symbol, '100px')} 
+                              className="cursor-pointer group/symbol"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExplanationSymbol(h.symbol);
+                              }}
+                            >
+                              <div 
+                                className="font-bold flex items-center gap-1.5 group-hover/symbol:text-fintech-accent transition-colors" 
+                                style={{ color: isRowProfit ? 'rgba(138, 255, 213, 0.8)' : 'rgba(243, 129, 129, 0.8)' }}
+                              >
+                                <span>{h.symbol}</span>
+                                <Info size={12} className="opacity-0 group-hover/symbol:opacity-100 text-fintech-accent transition-all transform translate-x-1 group-hover/symbol:translate-x-0" />
+                              </div>
+                              <div className="text-xs text-fintech-muted opacity-80 mt-0.5 group-hover/symbol:text-slate-300 transition-colors">{h.name}</div>
                             </td>
                             <td style={getColumnStyle(visibleColumns.quantity, '100px')} className="text-center font-medium">{hideValues ? '****' : h.quantity}</td>
                             <td style={getColumnStyle(visibleColumns.avgBuyPrice, '120px')} className="text-right text-fintech-muted">{hideValues ? '****' : formatCurrency(convertValue(h.avgBuyPrice, h.currency))}</td>
@@ -1564,9 +1594,15 @@ export default function Dashboard() {
                       </div>
                    )}
                    <div className="flex justify-between items-start mb-2">
-                     <div>
-                       <div className="font-bold text-lg text-white tracking-wide">{w.symbol}</div>
-                       <div className="text-xs text-fintech-muted truncate max-w-[140px] opacity-80 mt-0.5">{w.name}</div>
+                     <div 
+                       className="cursor-pointer group/w-symbol"
+                       onClick={() => setExplanationSymbol(w.symbol)}
+                     >
+                       <div className="font-bold text-lg text-white tracking-wide flex items-center gap-1.5 group-hover/w-symbol:text-fintech-accent transition-colors">
+                         <span>{w.symbol}</span>
+                         <Info size={12} className="opacity-0 group-hover/w-symbol:opacity-100 text-fintech-accent transition-all transform translate-x-1 group-hover/w-symbol:translate-x-0" />
+                       </div>
+                       <div className="text-xs text-fintech-muted truncate max-w-[140px] opacity-80 mt-0.5 group-hover/w-symbol:text-slate-300 transition-colors">{w.name}</div>
                        <div className="flex flex-wrap gap-1 mt-2">
                          {w.sector && w.sector !== 'Unknown' && (
                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider text-white shadow-sm" style={{ backgroundColor: getSectorColor(w.sector) }}>
@@ -1709,9 +1745,18 @@ export default function Dashboard() {
                               onClick={() => toggleRow(h.symbol)}
                             >
                               <td className="p-5 text-center text-fintech-muted opacity-50 text-sm w-12">{i + 1}</td>
-                              <td className="p-5">
-                                <div className="font-bold text-white opacity-80">{h.symbol}</div>
-                                <div className="text-xs text-fintech-muted opacity-60 mt-0.5">{h.name}</div>
+                              <td 
+                                className="p-5 cursor-pointer group/symbol"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setExplanationSymbol(h.symbol);
+                                }}
+                              >
+                                <div className="font-bold text-white opacity-80 flex items-center gap-1.5 group-hover/symbol:text-fintech-accent transition-colors">
+                                  <span>{h.symbol}</span>
+                                  <Info size={12} className="opacity-0 group-hover/symbol:opacity-100 text-fintech-accent transition-all transform translate-x-1 group-hover/symbol:translate-x-0" />
+                                </div>
+                                <div className="text-xs text-fintech-muted opacity-60 mt-0.5 group-hover/symbol:text-slate-300 transition-colors">{h.name}</div>
                               </td>
                               <td className="p-5 text-right font-medium text-slate-400">
                                 {h.transactions?.length || 0}
@@ -2095,6 +2140,48 @@ export default function Dashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Company Explanation Modal */}
+      {explanationSymbol && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-fintech-card border border-fintech-border w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden transition-all duration-300 transform scale-100 flex flex-col animate-in zoom-in-95 duration-200">
+            <button
+              onClick={() => setExplanationSymbol(null)}
+              className="absolute top-4 right-4 text-fintech-muted hover:text-white transition-colors"
+            >
+              <X size={18} />
+            </button>
+            <div className="text-[10px] font-extrabold bg-fintech-accent/20 text-fintech-accent px-3 py-1 rounded-full uppercase tracking-widest w-fit mb-4">
+              Company Explanation
+            </div>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-fintech-accent/10 border border-fintech-accent/20 flex items-center justify-center">
+                <Building2 size={24} className="text-fintech-accent" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-extrabold text-white leading-tight">
+                  {explanationSymbol}
+                </h3>
+                <p className="text-xs text-fintech-muted truncate max-w-[280px]">
+                  {holdings.find(h => h.symbol === explanationSymbol)?.name || 
+                   watchlist.find(w => w.symbol === explanationSymbol)?.name || 
+                   explanationSymbol}
+                </p>
+              </div>
+            </div>
+            <p className="text-slate-300 text-sm leading-relaxed border-t border-slate-800/80 pt-4 mt-2 mb-6 font-medium">
+              {COMPANY_EXPLANATIONS[explanationSymbol.toUpperCase()] || 
+               "No company explanation is currently configured for this ticker."}
+            </p>
+            <button
+              onClick={() => setExplanationSymbol(null)}
+              className="w-full bg-slate-800 hover:bg-slate-700 hover:text-white text-slate-300 font-bold py-3 px-4 rounded-xl transition-all text-sm shadow-lg border border-slate-700/50"
+            >
+              Close
+            </button>
           </div>
         </div>
       )}
