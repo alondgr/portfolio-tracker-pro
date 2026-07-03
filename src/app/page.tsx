@@ -1082,7 +1082,10 @@ export default function Dashboard() {
 
         <div className="bg-fintech-card border border-fintech-border rounded-2xl p-6 shadow-xl relative overflow-hidden group">
           <div className={`absolute inset-0 bg-gradient-to-br from-${isDailyProfit ? 'fintech-profit' : 'fintech-loss'}/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity`}></div>
-          <p className="text-fintech-muted font-medium mb-1 relative z-10">Total Daily Change</p>
+          <p className="text-fintech-muted font-medium mb-1 relative z-10 flex justify-between items-center">
+            <span>Total Daily Change</span>
+            <span className="text-xs opacity-60 font-normal">{new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+          </p>
           <div className="flex items-end gap-3 relative z-10">
             <h2 className={`text-3xl font-bold ${isDailyProfit ? 'text-fintech-profit' : 'text-fintech-loss'}`}>
               {hideValues ? '****' : `${isDailyProfit ? '+' : ''}${formatCurrency(totalDailyChange)}`}
