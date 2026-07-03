@@ -1189,8 +1189,7 @@ export default function Dashboard() {
                         <React.Fragment key={i}>
                           {/* Main Row */}
                           <tr
-                            className={`hover:bg-fintech-bg/30 transition-colors group/row cursor-pointer ${isExpanded ? 'bg-fintech-bg/10' : ''}`}
-                            onClick={() => toggleRow(h.symbol)}
+                            className={`hover:bg-fintech-bg/30 transition-colors group/row ${isExpanded ? 'bg-fintech-bg/10' : ''}`}
                           >
                             <td style={getColumnStyle(visibleColumns.index, '48px', '48px')} className="text-center text-fintech-muted font-medium hidden md:table-cell">{i + 1}</td>
                             <td 
@@ -1244,8 +1243,12 @@ export default function Dashboard() {
                             </td>
                             <td style={getColumnStyle(visibleColumns.sector, '150px')} className="text-sm text-fintech-muted truncate max-w-[130px]" title={h.sector}>{h.sector || 'Unknown'}</td>
                             <td style={getColumnStyle(visibleColumns.industry, '150px')} className="text-sm text-fintech-muted truncate max-w-[130px]" title={h.industry}>{h.industry || 'Unknown'}</td>
-                            <td style={getColumnStyle(visibleColumns.actions, '80px')} className="text-center text-fintech-muted sticky right-0 bg-fintech-card border-l border-fintech-border z-10">
-                              <button className="p-2 rounded-full hover:bg-fintech-border transition-colors">
+                            <td 
+                              style={getColumnStyle(visibleColumns.actions, '80px')} 
+                              className="text-center text-fintech-muted sticky right-0 bg-fintech-card border-l border-fintech-border z-10 cursor-pointer hover:bg-fintech-border/30 transition-colors"
+                              onClick={() => toggleRow(h.symbol)}
+                            >
+                              <button className="p-2 rounded-full pointer-events-none">
                                 {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                               </button>
                             </td>
@@ -1780,8 +1783,7 @@ export default function Dashboard() {
                         return (
                           <React.Fragment key={`closed-${i}`}>
                             <tr
-                              className={`hover:bg-fintech-bg/20 transition-colors group/row cursor-pointer ${isExpanded ? 'bg-fintech-bg/10' : ''}`}
-                              onClick={() => toggleRow(h.symbol)}
+                              className={`hover:bg-fintech-bg/20 transition-colors group/row ${isExpanded ? 'bg-fintech-bg/10' : ''}`}
                             >
                               <td className="p-5 text-center text-fintech-muted opacity-50 text-sm w-12">{i + 1}</td>
                               <td 
@@ -1809,8 +1811,11 @@ export default function Dashboard() {
                                   <span className="text-[10px] uppercase opacity-70 mt-0.5 text-fintech-muted">Final Yield</span>
                                 </div>
                               </td>
-                              <td className="p-5 text-center text-fintech-muted">
-                                <button className="p-2 rounded-full hover:bg-slate-700/50 transition-colors">
+                              <td 
+                                className="p-5 text-center text-fintech-muted cursor-pointer hover:bg-slate-700/30 transition-colors"
+                                onClick={() => toggleRow(h.symbol)}
+                              >
+                                <button className="p-2 rounded-full pointer-events-none">
                                   {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                                 </button>
                               </td>
