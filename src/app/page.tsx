@@ -850,6 +850,15 @@ export default function Dashboard() {
 
   const isProfit = totalUnrealizedPL >= 0;
 
+  let latestMarketDateStr = new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  if (holdings.length > 0) {
+    const validDates = holdings.map(h => h.marketDate ? new Date(h.marketDate).getTime() : 0).filter(t => t > 0);
+    if (validDates.length > 0) {
+      const maxTime = Math.max(...validDates);
+      latestMarketDateStr = new Date(maxTime).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    }
+  }
+
   const tickerItems = [
     ...marketData.map(m => {
       let symbol = m.symbol;
@@ -1084,7 +1093,7 @@ export default function Dashboard() {
           <div className={`absolute inset-0 bg-gradient-to-br from-${isDailyProfit ? 'fintech-profit' : 'fintech-loss'}/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity`}></div>
           <p className="text-fintech-muted font-medium mb-1 relative z-10 flex justify-between items-center">
             <span>Total Daily Change</span>
-            <span className="text-xs opacity-60 font-normal">{new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+            <span className="text-xs opacity-60 font-normal">{latestMarketDateStr}</span>
           </p>
           <div className="flex items-end gap-3 relative z-10">
             <h2 className={`text-3xl font-bold ${isDailyProfit ? 'text-fintech-profit' : 'text-fintech-loss'}`}>

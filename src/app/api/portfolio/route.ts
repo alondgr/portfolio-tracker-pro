@@ -146,6 +146,7 @@ export async function GET() {
         dividendDate,
         sector,
         industry,
+        marketDate: q?.regularMarketTime || null,
       };
     }));
 
