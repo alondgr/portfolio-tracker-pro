@@ -93,7 +93,8 @@ export default function Dashboard() {
       whiteSpace: 'nowrap' as const,
       pointerEvents: isVisible ? ('auto' as const) : ('none' as const),
       transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
-      borderWidth: isVisible ? '' : '0px'
+      borderWidth: isVisible ? '' : '0px',
+      display: isVisible ? undefined : 'none'
     };
   };
 
@@ -844,6 +845,9 @@ export default function Dashboard() {
   const totalYieldSum = filteredHoldings.reduce((sum, h) => sum + ((h.yieldPct || 0) * convertValue(h.marketValue || 0, h.currency)), 0);
   const avgYield = totalMarketValue > 0 ? (totalYieldSum / totalMarketValue) : 0;
 
+  const totalDailyChange = filteredHoldings.reduce((sum, h) => sum + convertValue((h.dailyChange || 0) * h.quantity, h.currency), 0);
+  const isDailyProfit = totalDailyChange >= 0;
+
   const isProfit = totalUnrealizedPL >= 0;
 
   const tickerItems = [
@@ -1037,7 +1041,7 @@ export default function Dashboard() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-10">
         <div className="bg-fintech-card border border-fintech-border rounded-2xl p-6 shadow-xl relative overflow-hidden group">
           <div className="absolute inset-0 bg-gradient-to-br from-fintech-muted/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
           <p className="text-fintech-muted font-medium mb-1 relative z-10">Total Capital Invested</p>
@@ -1074,6 +1078,20 @@ export default function Dashboard() {
           <h2 className="text-3xl font-bold text-white relative z-10">
             {avgYield.toFixed(2)}%
           </h2>
+        </div>
+
+        <div className="bg-fintech-card border border-fintech-border rounded-2xl p-6 shadow-xl relative overflow-hidden group">
+          <div className={`absolute inset-0 bg-gradient-to-br from-${isDailyProfit ? 'fintech-profit' : 'fintech-loss'}/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity`}></div>
+          <p className="text-fintech-muted font-medium mb-1 relative z-10">Total Daily Change</p>
+          <div className="flex items-end gap-3 relative z-10">
+            <h2 className={`text-3xl font-bold ${isDailyProfit ? 'text-fintech-profit' : 'text-fintech-loss'}`}>
+              {hideValues ? '****' : `${isDailyProfit ? '+' : ''}${formatCurrency(totalDailyChange)}`}
+            </h2>
+            <div className={`flex items-center mb-1 text-sm font-semibold px-2 py-0.5 rounded-md ${isDailyProfit ? 'bg-fintech-profit/20 text-fintech-profit' : 'bg-fintech-loss/20 text-fintech-loss'}`}>
+              {isDailyProfit ? <TrendingUp size={14} className="mr-1" /> : <TrendingDown size={14} className="mr-1" />}
+              {totalMarketValue > 0 ? ((totalDailyChange / totalMarketValue) * 100).toFixed(2) : 0}%
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1230,7 +1248,7 @@ export default function Dashboard() {
                                   <div className="bg-slate-800/50 px-4 py-3 border-b border-fintech-border flex justify-between items-center">
                                     <h4 className="text-sm font-semibold text-fintech-text tracking-wide uppercase">Transaction Ledger: {h.symbol}</h4>
                                     <button
-                                      onClick={(e) => {
+                                      onClick={async (e) => {
                                         e.stopPropagation();
                                         if (txnFormActiveSymbol === h.symbol) {
                                           setTxnFormActiveSymbol(null);
@@ -1240,6 +1258,15 @@ export default function Dashboard() {
                                             ...prev,
                                             price: h.currentPrice ? h.currentPrice.toString() : ''
                                           }));
+                                          try {
+                                            const res = await fetch(`/api/price?symbol=${h.symbol}`);
+                                            const data = await res.json();
+                                            if (data.price) {
+                                              setTxnForm(prev => ({ ...prev, price: data.price.toString() }));
+                                            }
+                                          } catch (err) {
+                                            console.error('Failed to fetch real-time price', err);
+                                          }
                                         }
                                       }}
                                       className="text-xs font-medium px-3 py-1.5 rounded-lg bg-fintech-accent/20 text-fintech-accent hover:bg-fintech-accent/30 transition-colors"
@@ -1784,7 +1811,7 @@ export default function Dashboard() {
                                     <div className="bg-slate-800/30 px-4 py-3 border-b border-fintech-border flex justify-between items-center opacity-80">
                                       <h4 className="text-sm font-semibold text-fintech-text tracking-wide uppercase">Transaction Ledger: {h.symbol}</h4>
                                       <button
-                                        onClick={(e) => {
+                                        onClick={async (e) => {
                                           e.stopPropagation();
                                           if (txnFormActiveSymbol === h.symbol) {
                                             setTxnFormActiveSymbol(null);
@@ -1794,6 +1821,15 @@ export default function Dashboard() {
                                               ...prev,
                                               price: h.currentPrice ? h.currentPrice.toString() : ''
                                             }));
+                                            try {
+                                              const res = await fetch(`/api/price?symbol=${h.symbol}`);
+                                              const data = await res.json();
+                                              if (data.price) {
+                                                setTxnForm(prev => ({ ...prev, price: data.price.toString() }));
+                                              }
+                                            } catch (err) {
+                                              console.error('Failed to fetch real-time price', err);
+                                            }
                                           }
                                         }}
                                         className="text-xs font-medium px-3 py-1.5 rounded-lg bg-fintech-accent/10 text-fintech-accent hover:bg-fintech-accent/20 transition-colors"
