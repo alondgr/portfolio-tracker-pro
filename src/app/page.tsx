@@ -30,7 +30,24 @@ const COMPANY_EXPLANATIONS: Record<string, string> = {
   TSM: "The world's dominant semiconductor foundry. They physically manufacture the actual advanced microchips designed by big tech giants, completely controlling global hardware production infrastructure.",
   AVGO: "An infrastructure semiconductor powerhouse. They dominate the specialized chips and networking hardware required to physically link massive AI data servers together globally.",
   AMZN: "Unrivaled e-commerce giant structurally backed by AWS. Their high-margin cloud computing network dominance completely funds aggressive retail and next-generation logistics expansions worldwide.",
-  VRTX: "A biotech juggernaut carrying zero debt. They hold an ironclad global monopoly on life-saving cystic fibrosis therapies, generating completely recession-proof revenue."
+  VRTX: "A biotech juggernaut carrying zero debt. They hold an ironclad global monopoly on life-saving cystic fibrosis therapies, generating completely recession-proof revenue.",
+  AAPL: "The world's premier consumer electronics juggernaut. They command an unbreakable ecosystem of premium hardware and highly sticky subscription services, generating massive, recurring global cash flows.",
+  MSFT: "Unrivaled enterprise software titan structurally backed by Azure cloud. Their mission-critical operating systems and AI infrastructure create an ironclad moat capturing massive global corporate spending.",
+  MICROSOFT: "Unrivaled enterprise software titan structurally backed by Azure cloud. Their mission-critical operating systems and AI infrastructure create an ironclad moat capturing massive global corporate spending.",
+  INTEL: "A foundational American semiconductor pioneer. They control massive legacy chip manufacturing infrastructure while aggressively attempting to reclaim next-generation foundry dominance for Western technological independence.",
+  INTC: "A foundational American semiconductor pioneer. They control massive legacy chip manufacturing infrastructure while aggressively attempting to reclaim next-generation foundry dominance for Western technological independence.",
+  ORCL: "The premier legacy database infrastructure giant. They secure massive corporate data systems while rapidly expanding cutting-edge cloud infrastructure to power next-generation global AI workloads.",
+  STRK: "A dominant global medical technology powerhouse. They provide critical, life-saving surgical equipment and advanced orthopedics, securing completely recession-proof revenue from the global healthcare system.",
+  MSTR: "The ultimate corporate Bitcoin treasury vehicle. They brilliantly leverage enterprise software cash flows and cheap institutional debt to aggressively acquire massive digital asset reserves.",
+  MSTY: "An aggressive high-yield options strategy fund. It writes complex covered calls on MSTR volatility, designed to capture extreme price swings and spin off massive monthly income.",
+  KRYS: "An elite commercial-stage biotech innovator. They hold proprietary, life-saving gene therapies targeting ultra-rare diseases, capturing extreme pricing power and generating completely recession-proof revenue streams.",
+  RKLB: "The premier dedicated small-satellite launch provider. They dominate specialized orbital infrastructure deployment and spacecraft manufacturing, physically building the next generation of the global space economy.",
+  NET: "The world's dominant cloud edge network. They secure critical global internet infrastructure and massive corporate enterprise systems, providing an unbreakable defensive shield against cyber threats.",
+  TSLA: "An unrivaled global clean energy juggernaut. They completely dominate the physical manufacturing of advanced robotics, battery infrastructure, and autonomous artificial intelligence transportation networks.",
+  ASML: "The absolute monopoly in advanced semiconductor lithography. They build the incredibly complex, irreplaceable extreme ultraviolet machines required to physically manufacture the world's most advanced microchips.",
+  MU: "A premier global memory chip powerhouse. They manufacture the critical, high-performance DRAM and NAND storage infrastructure physically required to power massive artificial intelligence data centers.",
+  VRT: "An elite data center infrastructure provider. They design the massive liquid cooling systems and power management grids physically required to keep the global AI supercomputing revolution running safely.",
+  B: "A diversified industrial manufacturing powerhouse. They design critical engineered components for aerospace and medical systems, capturing rock-solid, highly predictable cash flows from global industrial expansion."
 };
 
 
