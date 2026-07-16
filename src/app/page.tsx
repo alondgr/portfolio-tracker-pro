@@ -128,6 +128,7 @@ export default function Dashboard() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [isSymbolSelected, setIsSymbolSelected] = useState(false);
   const [selectedCurrency, setSelectedCurrency] = useState('USD');
   const [rates, setRates] = useState<Record<string, number>>({ USD: 1 });
 
@@ -602,6 +603,7 @@ export default function Dashboard() {
 
   const selectSymbol = (suggestion: any) => {
     setFormData(prev => ({ ...prev, symbol: suggestion.symbol }));
+    setIsSymbolSelected(true);
     setShowDropdown(false);
     fetchCurrentPrice(suggestion.symbol);
   };
@@ -1053,6 +1055,7 @@ export default function Dashboard() {
             onClick={() => {
               setFormData({ symbol: '', quantity: '1', avgBuyPrice: '', date: new Date().toISOString().split('T')[0] });
               setSearchResults([]);
+              setIsSymbolSelected(false);
               setShowModal(true);
             }}
             className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-fintech-profit hover:bg-emerald-600 text-white rounded-full font-bold transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_20px_rgba(16,185,129,0.5)] order-5 sm:order-none"
@@ -2042,6 +2045,7 @@ export default function Dashboard() {
                     onChange={e => {
                       const val = e.target.value.toUpperCase();
                       setFormData({ ...formData, symbol: val });
+                      setIsSymbolSelected(false);
                       handleSymbolSearch(val);
                     }}
                     onFocus={() => formData.symbol && setShowDropdown(true)}
@@ -2124,10 +2128,10 @@ export default function Dashboard() {
                 </button>
                 <button
                   type="submit"
-                  disabled={submitLoading}
+                  disabled={submitLoading || !isSymbolSelected}
                   className="flex-1 py-3 px-4 rounded-xl font-medium text-white bg-fintech-accent hover:bg-blue-600 transition-colors shadow-[0_0_15px_rgba(59,130,246,0.4)] disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center"
                 >
-                  {submitLoading ? <RefreshCw size={20} className="animate-spin" /> : 'Start Tracking'}
+                  {submitLoading ? <RefreshCw size={20} className="animate-spin" /> : 'ADD'}
                 </button>
               </div>
             </form>
