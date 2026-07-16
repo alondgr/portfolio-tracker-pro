@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     // Public API - allowed for Ghost users
 
     const yahooFinance = new (yf.YahooFinance || yf)();
-    const result = await yahooFinance.search(query);
+    const result = await yahooFinance.search(query, {}, { validateResult: false });
     // Filter to only include equities/stocks and relevant types
     const quotes = Array.isArray(result) ? result : (result.quotes || []);
     const suggestions = quotes
