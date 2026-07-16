@@ -6,7 +6,7 @@ import PerformanceChart from '@/components/PerformanceChart';
 import TickerTape from '@/components/TickerTape';
 import WisdomQuote from '@/components/WisdomQuote';
 import { 
-  Building2, ChevronDown, ChevronUp, LogOut, Search, TrendingDown, TrendingUp, X,
+  Building2, ChevronDown, ChevronUp, LogOut, Search, TrendingDown, TrendingUp, X, Check,
   ArrowUpDown, RefreshCw, Plus, Star, AlertCircle, RefreshCcw, Trash2, Edit2, Eye, EyeOff, Coins, Info, Sparkles
 } from 'lucide-react';
 import { useUser, SignUpButton, UserButton } from '@clerk/nextjs';
@@ -1664,7 +1664,14 @@ export default function Dashboard() {
                          <span>{w.symbol}</span>
                          <Info size={12} className="opacity-0 group-hover/w-symbol:opacity-100 text-fintech-accent transition-all transform translate-x-1 group-hover/w-symbol:translate-x-0" />
                        </div>
-                       <div className="text-xs text-fintech-muted truncate max-w-[140px] opacity-80 mt-0.5 group-hover/w-symbol:text-slate-300 transition-colors">{w.name}</div>
+                       <div className="flex items-center gap-2 mt-0.5">
+                         <div className="text-xs text-fintech-muted truncate max-w-[140px] opacity-80 group-hover/w-symbol:text-slate-300 transition-colors">{w.name}</div>
+                         {holdings.some(h => h.symbol === w.symbol) && (
+                           <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                             <Check size={8} /> OWNED
+                           </span>
+                         )}
+                       </div>
                        <div className="flex flex-wrap gap-1 mt-2">
                          {w.sector && w.sector !== 'Unknown' && (
                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider text-white shadow-sm" style={{ backgroundColor: getSectorColor(w.sector) }}>
@@ -1679,6 +1686,18 @@ export default function Dashboard() {
                        </div>
                      </div>
                      <div className="flex items-center gap-1">
+                       <button 
+                         onClick={() => {
+                           setFormData({ symbol: w.symbol, quantity: '1', avgBuyPrice: (w.price || 0).toString(), date: new Date().toISOString().split('T')[0] });
+                           setIsSymbolSelected(true);
+                           setSearchResults([]);
+                           setShowModal(true);
+                         }}
+                         className="text-fintech-muted hover:text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-md hover:bg-emerald-500/10"
+                         title="Add to Portfolio"
+                       >
+                         <Plus size={16} />
+                       </button>
                        <button 
                          onClick={() => handleToggleStar(w)}
                          className={`p-1.5 rounded-md transition-colors ${w.isStarred ? 'text-amber-400 hover:text-amber-300' : 'text-fintech-muted hover:text-amber-400/70 opacity-0 group-hover:opacity-100'}`}
