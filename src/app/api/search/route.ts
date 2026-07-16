@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     // Filter to only include equities/stocks and relevant types
     const quotes = Array.isArray(result) ? result : (result.quotes || []);
     const suggestions = quotes
-      .filter((q: any) => q.symbol && (q.quoteType === 'EQUITY' || q.quoteType === 'ETF' || q.type === 'EQUITY'))
+      .filter((q: any) => q.symbol)
       .map((q: any) => ({
         symbol: q.symbol,
         name: q.longname || q.shortname || q.symbol || 'Unknown Name',
