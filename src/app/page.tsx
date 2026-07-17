@@ -1288,11 +1288,10 @@ export default function Dashboard() {
                                       <span className="text-purple-300 font-medium" title={`Moat: ${aiData.moatScore}`}>M:{aiData.moatScore}</span>
                                       <span className="text-amber-300 font-medium" title={`Value: ${aiData.valueScore}`}>V:{aiData.valueScore}</span>
                                     </div>
-                                    {isTrinity && (
-                                    {showConfluenceBadge && (
-                                     <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm ${isTrinity ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-white' : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white'}`}>
-                                       {isTrinity ? 'TRINITY' : 'CONFLUENCE'}
-                                     </span>
+                                    {(isTrinity || isConfluence) && (
+                                      <span className={`text-[9px] font-bold px-1.5 py-0.5 mt-0.5 rounded shadow-sm ${isTrinity ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-white' : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white'}`}>
+                                        {isTrinity ? 'TRINITY' : 'CONFLUENCE'}
+                                      </span>
                                     )}
                                   </div>
                                 );
