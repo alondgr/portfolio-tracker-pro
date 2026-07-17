@@ -83,6 +83,7 @@ export default function Dashboard() {
     quantity: true,
     avgBuyPrice: true,
     currentPrice: true,
+    portfolioPct: true,
     marketValue: true,
     dailyChange: true,
     unrealizedPL: true,
@@ -856,6 +857,14 @@ export default function Dashboard() {
       return 0;
     }
 
+    if (key === 'portfolioPct') {
+      const aVal = a.marketValue || 0;
+      const bVal = b.marketValue || 0;
+      if (aVal < bVal) return direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return direction === 'asc' ? 1 : -1;
+      return 0;
+    }
+
     let aVal = a[key] ?? '';
     let bVal = b[key] ?? '';
 
@@ -1182,7 +1191,7 @@ export default function Dashboard() {
                          onChange={() => setVisibleColumns(prev => ({...prev, [col]: !prev[col]}))}
                          className="rounded bg-slate-800 border-fintech-border text-fintech-accent focus:ring-fintech-accent"
                        />
-                       {col === 'index' ? '#' : col === 'unrealizedPL' ? 'Unrealized P/L' : col === 'yieldPct' ? 'Div Yield' : col === 'avgBuyPrice' ? 'Avg Price' : col === 'dailyChange' ? 'Daily Change' : col.charAt(0).toUpperCase() + col.slice(1).replace(/([A-Z])/g, ' $1')}
+                       {col === 'index' ? '#' : col === 'portfolioPct' ? 'Portfolio %' : col === 'unrealizedPL' ? 'Unrealized P/L' : col === 'yieldPct' ? 'Div Yield' : col === 'avgBuyPrice' ? 'Avg Price' : col === 'dailyChange' ? 'Daily Change' : col.charAt(0).toUpperCase() + col.slice(1).replace(/([A-Z])/g, ' $1')}
                      </label>
                    ))}
                 </div>
@@ -1206,6 +1215,7 @@ export default function Dashboard() {
                     <SortableHeader label="Shares" sortKey="quantity" alignCenter style={getColumnStyle(visibleColumns.quantity, '100px')} />
                     <SortableHeader label="Avg Price" sortKey="avgBuyPrice" alignRight style={getColumnStyle(visibleColumns.avgBuyPrice, '120px')} />
                     <SortableHeader label="Current Price" sortKey="currentPrice" alignRight style={getColumnStyle(visibleColumns.currentPrice, '120px')} />
+                    <SortableHeader label="Port. %" sortKey="portfolioPct" alignRight style={getColumnStyle(visibleColumns.portfolioPct, '100px')} />
                     <SortableHeader label="Market Value" sortKey="marketValue" alignRight style={getColumnStyle(visibleColumns.marketValue, '140px')} />
                     <SortableHeader label="Daily Change" sortKey="dailyChange" alignRight style={getColumnStyle(visibleColumns.dailyChange, '140px')} />
                     <SortableHeader label="Unrealized P/L" sortKey="unrealizedPL" alignRight style={getColumnStyle(visibleColumns.unrealizedPL, '140px')} />
@@ -1255,13 +1265,11 @@ export default function Dashboard() {
                             <td style={getColumnStyle(visibleColumns.quantity, '100px')} className="text-center font-medium">{hideValues ? '****' : h.quantity}</td>
                             <td style={getColumnStyle(visibleColumns.avgBuyPrice, '120px')} className="text-right text-fintech-muted">{hideValues ? '****' : formatCurrency(convertValue(h.avgBuyPrice, h.currency))}</td>
                             <td style={getColumnStyle(visibleColumns.currentPrice, '120px')} className="text-right font-medium">{formatCurrency(convertValue(h.currentPrice, h.currency))}</td>
+                            <td style={getColumnStyle(visibleColumns.portfolioPct, '100px')} className="text-right font-medium text-fintech-accent tracking-wide">
+                              {totalMarketValue > 0 && h.marketValue ? ((h.marketValue / totalMarketValue) * 100).toFixed(2) : '0.00'}%
+                            </td>
                             <td style={getColumnStyle(visibleColumns.marketValue, '140px')} className="text-right font-semibold text-white">
-                              <div className="flex flex-col items-end">
-                                <span>{hideValues ? '****' : formatCurrency(convertValue(h.marketValue || 0, h.currency))}</span>
-                                <span className="text-sm font-medium text-fintech-accent mt-0.5 tracking-wide">
-                                  {totalMarketValue > 0 && h.marketValue ? ((h.marketValue / totalMarketValue) * 100).toFixed(2) : '0.00'}%
-                                </span>
-                              </div>
+                              {hideValues ? '****' : formatCurrency(convertValue(h.marketValue || 0, h.currency))}
                             </td>
                             <td style={getColumnStyle(visibleColumns.dailyChange, '140px')} className={`text-right font-bold ${(h.dailyChange || 0) >= 0 ? 'text-fintech-profit' : 'text-fintech-loss'}`}>
                               <div className="flex flex-col items-end">
