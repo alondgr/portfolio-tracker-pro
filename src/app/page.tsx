@@ -86,6 +86,7 @@ export default function Dashboard() {
     marketValue: true,
     dailyChange: true,
     unrealizedPL: true,
+    aiScore: true,
     yieldPct: false,
     sector: false,
     industry: false,
@@ -402,10 +403,10 @@ export default function Dashboard() {
   };
 
   const runAiAnalysis = async () => {
-    if (watchlist.length === 0) return;
+    const symbols = Array.from(new Set([...watchlist.map(w => w.symbol), ...holdings.map(h => h.symbol)]));
+    if (symbols.length === 0) return;
     setAiLoading(true);
     try {
-      const symbols = watchlist.map(w => w.symbol);
       const res = await fetch('/api/ai-analysis', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -842,6 +843,19 @@ export default function Dashboard() {
     if (!sortConfig) return 0;
     const { key, direction } = sortConfig;
 
+    if (key === 'aiScore') {
+      const getScore = (symbol: string) => {
+        const aiData = aiResults.find(r => r.symbol === symbol);
+        if (!aiData) return 0;
+        return (aiData.garpScore + aiData.moatScore) / 2;
+      };
+      const aValScore = getScore(a.symbol);
+      const bValScore = getScore(b.symbol);
+      if (aValScore < bValScore) return direction === 'asc' ? -1 : 1;
+      if (aValScore > bValScore) return direction === 'asc' ? 1 : -1;
+      return 0;
+    }
+
     let aVal = a[key] ?? '';
     let bVal = b[key] ?? '';
 
@@ -1037,6 +1051,14 @@ export default function Dashboard() {
           </div>
           <div className="flex gap-2 order-4 sm:order-none">
             <button
+              onClick={runAiAnalysis}
+              disabled={aiLoading || (holdings.length === 0 && watchlist.length === 0)}
+              className="p-2 rounded-full bg-fintech-card border border-indigo-500/30 hover:border-indigo-500 transition-colors flex items-center justify-center text-indigo-300 hover:bg-indigo-500/10 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Run AI Analysis"
+            >
+              {aiLoading ? <RefreshCw size={20} className="animate-spin text-indigo-400" /> : <Sparkles size={20} />}
+            </button>
+            <button
               onClick={fetchPortfolio}
               className="p-2 rounded-full bg-fintech-card border border-fintech-border hover:bg-fintech-border transition-colors flex items-center justify-center text-fintech-text"
               title="Refresh Data"
@@ -1187,6 +1209,7 @@ export default function Dashboard() {
                     <SortableHeader label="Market Value" sortKey="marketValue" alignRight style={getColumnStyle(visibleColumns.marketValue, '140px')} />
                     <SortableHeader label="Daily Change" sortKey="dailyChange" alignRight style={getColumnStyle(visibleColumns.dailyChange, '140px')} />
                     <SortableHeader label="Unrealized P/L" sortKey="unrealizedPL" alignRight style={getColumnStyle(visibleColumns.unrealizedPL, '140px')} />
+                    <SortableHeader label="AI Score" sortKey="aiScore" alignRight style={getColumnStyle(visibleColumns.aiScore, '110px')} />
                     <SortableHeader label="Div Yield" sortKey="yieldPct" alignRight style={getColumnStyle(visibleColumns.yieldPct, '100px')} />
                     <SortableHeader label="Sector" sortKey="sector" style={getColumnStyle(visibleColumns.sector, '150px')} />
                     <SortableHeader label="Industry" sortKey="industry" style={getColumnStyle(visibleColumns.industry, '150px')} />
@@ -1251,6 +1274,26 @@ export default function Dashboard() {
                                 <span>{hideValues ? '****' : `${isRowProfit ? '+' : ''}${formatCurrency(convertValue(h.unrealizedPL || 0, h.currency))}`}</span>
                                 <span className="text-sm opacity-80">{isRowProfit ? '+' : ''}{(h.unrealizedPLPercent || 0).toFixed(2)}%</span>
                               </div>
+                            </td>
+                            <td style={getColumnStyle(visibleColumns.aiScore, '110px')} className="text-right">
+                              {(() => {
+                                const aiData = aiResults.find(r => r.symbol === h.symbol);
+                                if (!aiData) return <span className="text-fintech-muted text-xs opacity-50">-</span>;
+                                const isConfluence = aiData.garpScore >= 75 && aiData.moatScore >= 75;
+                                return (
+                                  <div className="flex flex-col items-end gap-0.5">
+                                    <div className="flex items-center gap-1.5 text-xs">
+                                      <span className="text-indigo-300 font-medium" title={`GARP: ${aiData.garpScore}`}>G:{aiData.garpScore}</span>
+                                      <span className="text-purple-300 font-medium" title={`Moat: ${aiData.moatScore}`}>M:{aiData.moatScore}</span>
+                                    </div>
+                                    {isConfluence && (
+                                      <span className="text-[9px] bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold px-1 py-0.5 mt-0.5 rounded shadow-sm">
+                                        CONFLUENCE
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </td>
                             <td style={getColumnStyle(visibleColumns.yieldPct, '100px')} className="text-right">
                               <div className="text-fintech-muted">{(h.yieldPct || 0).toFixed(2)}%</div>
