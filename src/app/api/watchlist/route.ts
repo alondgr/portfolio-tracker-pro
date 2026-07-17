@@ -35,6 +35,7 @@ export async function GET() {
           currency: summary.price?.currency || 'USD',
           sector: summary.assetProfile?.sector || "Unknown",
           industry: summary.assetProfile?.industry || "Unknown",
+          explanation: summary.assetProfile?.longBusinessSummary || "",
         };
       } catch (e) {
         // Fallback to simple quote if quoteSummary fails
@@ -48,6 +49,7 @@ export async function GET() {
             currency: q?.currency || 'USD',
             sector: "Unknown",
             industry: "Unknown",
+            explanation: "",
           };
         } catch (err) {}
       }
@@ -78,6 +80,7 @@ export async function GET() {
         currency: q?.currency || 'USD',
         sector: q?.sector || "Unknown",
         industry: q?.industry || "Unknown",
+        explanation: q?.explanation || "",
       };
     });
 

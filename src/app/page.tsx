@@ -284,6 +284,7 @@ export default function Dashboard() {
                   currency: quote.currency || 'USD',
                   sector: quote.sector || "Unknown",
                   industry: quote.industry || "Unknown",
+                  explanation: quote.explanation || "",
                   transactions: h.transactions || []
                 };
               }
@@ -1054,7 +1055,6 @@ export default function Dashboard() {
             <span>{h.symbol}</span>
             <Info size={12} className="opacity-0 group-hover/symbol:opacity-100 text-fintech-accent transition-all transform translate-x-1 group-hover/symbol:translate-x-0" />
           </div>
-          <div className="text-xs text-fintech-muted opacity-80 mt-0.5 group-hover/symbol:text-slate-300 transition-colors">{h.name}</div>
         </td>
       );
       case 'quantity': return <td key="quantity" style={getColumnStyle(visibleColumns.quantity, '100px')} className="text-center font-medium">{hideValues ? '****' : h.quantity}</td>;
@@ -2447,7 +2447,9 @@ export default function Dashboard() {
               </div>
             </div>
             <p className="text-slate-300 text-sm leading-relaxed border-t border-slate-800/80 pt-4 mt-2 mb-6 font-medium">
-              {COMPANY_EXPLANATIONS[explanationSymbol.toUpperCase()] || 
+              {holdings.find(h => h.symbol === explanationSymbol)?.explanation || 
+               watchlist.find(w => w.symbol === explanationSymbol)?.explanation ||
+               COMPANY_EXPLANATIONS[explanationSymbol.toUpperCase()] || 
                "No company explanation is currently configured for this ticker."}
             </p>
             <button

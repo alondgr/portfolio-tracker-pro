@@ -108,6 +108,7 @@ export async function GET() {
       
       let sector = "Unknown";
       let industry = "Unknown";
+      let explanation = "";
       let yieldPct = 0;
       let exDividendDate = null;
       let dividendDate = null;
@@ -116,6 +117,7 @@ export async function GET() {
         const summary = (await yahooFinance.quoteSummary(holding.symbol, { modules: ['assetProfile', 'summaryDetail', 'calendarEvents'] })) as any;
         sector = summary.assetProfile?.sector || "Unknown";
         industry = summary.assetProfile?.industry || "Unknown";
+        explanation = summary.assetProfile?.longBusinessSummary || "";
         yieldPct = summary.summaryDetail?.dividendYield ? summary.summaryDetail.dividendYield * 100 : 0;
         exDividendDate = summary.summaryDetail?.exDividendDate || summary.calendarEvents?.exDividendDate || null;
         dividendDate = summary.calendarEvents?.dividendDate || null;
@@ -141,11 +143,12 @@ export async function GET() {
         unrealizedPLPercent,
         dailyChange,
         dailyChangePct,
+        sector,
+        industry,
+        explanation,
         yieldPct,
         exDividendDate,
         dividendDate,
-        sector,
-        industry,
         marketDate: q?.regularMarketTime || null,
       };
     }));

@@ -44,14 +44,16 @@ export async function GET(request: Request) {
       results = await Promise.all(results.map(async (r: any) => {
         let sector = "Unknown";
         let industry = "Unknown";
+        let explanation = "";
         try {
           const summary = (await yahooFinance.quoteSummary(r.symbol, { modules: ['assetProfile'] })) as any;
           sector = summary.assetProfile?.sector || "Unknown";
           industry = summary.assetProfile?.industry || "Unknown";
+          explanation = summary.assetProfile?.longBusinessSummary || "";
         } catch (e) {
           // ignore error if profile not found
         }
-        return { ...r, sector, industry };
+        return { ...r, sector, industry, explanation };
       }));
     }
 
