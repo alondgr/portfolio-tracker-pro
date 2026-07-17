@@ -1624,7 +1624,7 @@ export default function Dashboard() {
                      
                      if (aiB.garpScore !== aiA.garpScore) return aiB.garpScore - aiA.garpScore;
                      return (aiB.upsidePct || 0) - (aiA.upsidePct || 0);
-                   } else {
+                   } else if (aiModelView === 'moat') {
                      const sortedMoat = [...aiResults].sort((x, y) => {
                        if (y.moatScore !== x.moatScore) return y.moatScore - x.moatScore;
                        return (y.upsidePct || 0) - (x.upsidePct || 0);
@@ -1699,7 +1699,7 @@ export default function Dashboard() {
                      } else if (w.isStarred) {
                        cardBorderClass = 'border-amber-400/50 shadow-[0_0_15px_rgba(251,191,36,0.1)]';
                      }
-                   } else {
+                   } else if (aiModelView === 'moat') {
                      const sortedMoat = [...aiResults].sort((x, y) => {
                        if (y.moatScore !== x.moatScore) return y.moatScore - x.moatScore;
                        return (y.upsidePct || 0) - (x.upsidePct || 0);
