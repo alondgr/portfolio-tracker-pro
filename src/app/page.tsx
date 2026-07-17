@@ -98,6 +98,59 @@ export default function Dashboard() {
   const visibleCount = Object.values(visibleColumns).filter(Boolean).length;
   const hasHiddenColumns = visibleCount < totalPossibleColumns;
 
+  // Drag and drop column state
+  const defaultColumnOrder = ['symbol', 'quantity', 'avgBuyPrice', 'currentPrice', 'portfolioPct', 'marketValue', 'dailyChange', 'unrealizedPL', 'aiScore', 'yieldPct', 'sector', 'industry'];
+  const [columnOrder, setColumnOrder] = useState<string[]>(defaultColumnOrder);
+  const [draggedCol, setDraggedCol] = useState<string | null>(null);
+  const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('portfolioColumnOrder');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length === defaultColumnOrder.length) {
+          setColumnOrder(parsed);
+        }
+      } catch (e) {}
+    }
+  }, []);
+
+  const handleDragStart = (e: React.DragEvent, col: string) => {
+    setDraggedCol(col);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', col);
+  };
+
+  const handleDragOver = (e: React.DragEvent, col: string) => {
+    e.preventDefault();
+    setDragOverCol(col);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetCol: string) => {
+    e.preventDefault();
+    if (!draggedCol || draggedCol === targetCol) {
+      setDraggedCol(null);
+      setDragOverCol(null);
+      return;
+    }
+    
+    setColumnOrder(prev => {
+      const newOrder = [...prev];
+      const dragIndex = newOrder.indexOf(draggedCol);
+      const targetIndex = newOrder.indexOf(targetCol);
+      
+      newOrder.splice(dragIndex, 1);
+      newOrder.splice(targetIndex, 0, draggedCol);
+      
+      localStorage.setItem('portfolioColumnOrder', JSON.stringify(newOrder));
+      return newOrder;
+    });
+    
+    setDraggedCol(null);
+    setDragOverCol(null);
+  };
+
   const getColumnStyle = (isVisible: boolean, baseMinWidth: string = '80px', baseWidth: string = 'auto') => {
     return {
       width: isVisible ? baseWidth : '0px',
@@ -934,12 +987,17 @@ export default function Dashboard() {
     }))
   ];
 
-  const SortableHeader = ({ label, sortKey, alignRight = false, alignCenter = false, className = "", style = {} }: { label: string, sortKey: string, alignRight?: boolean, alignCenter?: boolean, className?: string, style?: React.CSSProperties }) => {
+  const SortableHeader = ({ label, sortKey, alignRight = false, alignCenter = false, className = "", style = {}, draggable, onDragStart, onDragOver, onDrop, onDragEnd }: { label: string, sortKey: string, alignRight?: boolean, alignCenter?: boolean, className?: string, style?: React.CSSProperties, draggable?: boolean, onDragStart?: any, onDragOver?: any, onDrop?: any, onDragEnd?: any }) => {
     return (
       <th
         className={`font-semibold cursor-pointer select-none group hover:text-white transition-colors ${alignRight ? 'text-right' : alignCenter ? 'text-center' : ''} ${className}`}
         style={style}
         onClick={() => requestSort(sortKey)}
+        draggable={draggable}
+        onDragStart={onDragStart}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
+        onDragEnd={onDragEnd}
       >
         <div className={`flex items-center gap-1 ${alignRight ? 'justify-end' : alignCenter ? 'justify-center' : ''}`}>
           {label}
@@ -955,6 +1013,110 @@ export default function Dashboard() {
         </div>
       </th>
     );
+  };
+
+  const renderHeader = (colId: string) => {
+    if (!visibleColumns[colId]) return null;
+    const isDragOver = dragOverCol === colId;
+    const isDragged = draggedCol === colId;
+    const dragProps = {
+      draggable: true,
+      onDragStart: (e: any) => handleDragStart(e, colId),
+      onDragOver: (e: any) => handleDragOver(e, colId),
+      onDrop: (e: any) => handleDrop(e, colId),
+      onDragEnd: () => { setDraggedCol(null); setDragOverCol(null); },
+      className: `${isDragged ? 'opacity-30' : ''} ${isDragOver ? 'border-l-2 border-fintech-accent bg-fintech-accent/10' : ''}`
+    };
+
+    switch (colId) {
+      case 'symbol': return <SortableHeader key={colId} label="Symbol" sortKey="symbol" style={getColumnStyle(visibleColumns.symbol, '100px')} {...dragProps} />;
+      case 'quantity': return <SortableHeader key={colId} label="Shares" sortKey="quantity" alignCenter style={getColumnStyle(visibleColumns.quantity, '100px')} {...dragProps} />;
+      case 'avgBuyPrice': return <SortableHeader key={colId} label="Avg Price" sortKey="avgBuyPrice" alignRight style={getColumnStyle(visibleColumns.avgBuyPrice, '120px')} {...dragProps} />;
+      case 'currentPrice': return <SortableHeader key={colId} label="Current Price" sortKey="currentPrice" alignRight style={getColumnStyle(visibleColumns.currentPrice, '120px')} {...dragProps} />;
+      case 'portfolioPct': return <SortableHeader key={colId} label="Port. %" sortKey="portfolioPct" alignRight style={getColumnStyle(visibleColumns.portfolioPct, '100px')} {...dragProps} />;
+      case 'marketValue': return <SortableHeader key={colId} label="Market Value" sortKey="marketValue" alignRight style={getColumnStyle(visibleColumns.marketValue, '140px')} {...dragProps} />;
+      case 'dailyChange': return <SortableHeader key={colId} label="Daily Change" sortKey="dailyChange" alignRight style={getColumnStyle(visibleColumns.dailyChange, '140px')} {...dragProps} />;
+      case 'unrealizedPL': return <SortableHeader key={colId} label="Unrealized P/L" sortKey="unrealizedPL" alignRight style={getColumnStyle(visibleColumns.unrealizedPL, '140px')} {...dragProps} />;
+      case 'aiScore': return <SortableHeader key={colId} label="AI Score" sortKey="aiScore" alignRight style={getColumnStyle(visibleColumns.aiScore, '110px')} {...dragProps} />;
+      case 'yieldPct': return <SortableHeader key={colId} label="Div Yield" sortKey="yieldPct" alignRight style={getColumnStyle(visibleColumns.yieldPct, '100px')} {...dragProps} />;
+      case 'sector': return <SortableHeader key={colId} label="Sector" sortKey="sector" style={getColumnStyle(visibleColumns.sector, '150px')} {...dragProps} />;
+      case 'industry': return <SortableHeader key={colId} label="Industry" sortKey="industry" style={getColumnStyle(visibleColumns.industry, '150px')} {...dragProps} />;
+      default: return null;
+    }
+  };
+
+  const renderCell = (colId: string, h: any, isRowProfit: boolean, hideValues: boolean) => {
+    if (!visibleColumns[colId]) return null;
+    switch (colId) {
+      case 'symbol': return (
+        <td key="symbol" style={getColumnStyle(visibleColumns.symbol, '100px')} className="cursor-pointer group/symbol" onClick={(e) => { e.stopPropagation(); setExplanationSymbol(h.symbol); }}>
+          <div className="font-bold flex items-center gap-1.5 group-hover/symbol:text-fintech-accent transition-colors" style={{ color: isRowProfit ? 'rgba(138, 255, 213, 0.8)' : 'rgba(243, 129, 129, 0.8)' }}>
+            <span>{h.symbol}</span>
+            <Info size={12} className="opacity-0 group-hover/symbol:opacity-100 text-fintech-accent transition-all transform translate-x-1 group-hover/symbol:translate-x-0" />
+          </div>
+          <div className="text-xs text-fintech-muted opacity-80 mt-0.5 group-hover/symbol:text-slate-300 transition-colors">{h.name}</div>
+        </td>
+      );
+      case 'quantity': return <td key="quantity" style={getColumnStyle(visibleColumns.quantity, '100px')} className="text-center font-medium">{hideValues ? '****' : h.quantity}</td>;
+      case 'avgBuyPrice': return <td key="avgBuyPrice" style={getColumnStyle(visibleColumns.avgBuyPrice, '120px')} className="text-right text-fintech-muted">{hideValues ? '****' : formatCurrency(convertValue(h.avgBuyPrice, h.currency))}</td>;
+      case 'currentPrice': return <td key="currentPrice" style={getColumnStyle(visibleColumns.currentPrice, '120px')} className="text-right font-medium">{formatCurrency(convertValue(h.currentPrice, h.currency))}</td>;
+      case 'portfolioPct': return <td key="portfolioPct" style={getColumnStyle(visibleColumns.portfolioPct, '100px')} className="text-right font-medium text-fintech-accent tracking-wide">{totalMarketValue > 0 && h.marketValue ? ((h.marketValue / totalMarketValue) * 100).toFixed(2) : '0.00'}%</td>;
+      case 'marketValue': return <td key="marketValue" style={getColumnStyle(visibleColumns.marketValue, '140px')} className="text-right font-semibold text-white">{hideValues ? '****' : formatCurrency(convertValue(h.marketValue || 0, h.currency))}</td>;
+      case 'dailyChange': return (
+        <td key="dailyChange" style={getColumnStyle(visibleColumns.dailyChange, '140px')} className={`text-right font-bold ${(h.dailyChange || 0) >= 0 ? 'text-fintech-profit' : 'text-fintech-loss'}`}>
+          <div className="flex flex-col items-end">
+            <span>{hideValues ? '****' : `${(h.dailyChange || 0) >= 0 ? '+' : ''}${formatCurrency(convertValue((h.dailyChange || 0) * h.quantity, h.currency))}`}</span>
+            <span className="text-sm opacity-80">{(h.dailyChangePct || 0) >= 0 ? '+' : ''}{(h.dailyChangePct || 0).toFixed(2)}%</span>
+          </div>
+        </td>
+      );
+      case 'unrealizedPL': return (
+        <td key="unrealizedPL" style={getColumnStyle(visibleColumns.unrealizedPL, '140px')} className={`text-right font-bold ${isRowProfit ? 'text-fintech-profit' : 'text-fintech-loss'}`}>
+          <div className="flex flex-col items-end">
+            <span>{hideValues ? '****' : `${isRowProfit ? '+' : ''}${formatCurrency(convertValue(h.unrealizedPL || 0, h.currency))}`}</span>
+            <span className="text-sm opacity-80">{isRowProfit ? '+' : ''}{(h.unrealizedPLPercent || 0).toFixed(2)}%</span>
+          </div>
+        </td>
+      );
+      case 'aiScore': return (
+        <td key="aiScore" style={getColumnStyle(visibleColumns.aiScore, '110px')} className="text-right">
+          {(() => {
+            const aiData = aiResults.find(r => r.symbol === h.symbol);
+            if (!aiData) return <span className="text-fintech-muted text-xs opacity-50">-</span>;
+            const isTrinity = aiData.garpScore >= 75 && aiData.moatScore >= 75 && aiData.valueScore >= 75;
+            const isConfluence = !isTrinity && [aiData.garpScore, aiData.moatScore, aiData.valueScore].filter((s: number) => s >= 75).length >= 2;
+            return (
+              <div className="flex flex-col items-end gap-0.5">
+                <div className="flex items-center gap-1 text-[10px]">
+                  <span className="text-indigo-300 font-medium" title={`GARP: ${aiData.garpScore}`}>G:{aiData.garpScore}</span>
+                  <span className="text-purple-300 font-medium" title={`Moat: ${aiData.moatScore}`}>M:{aiData.moatScore}</span>
+                  <span className="text-amber-300 font-medium" title={`Value: ${aiData.valueScore}`}>V:{aiData.valueScore}</span>
+                </div>
+                {(isTrinity || isConfluence) && (
+                  <span className={`text-[9px] font-bold px-1.5 py-0.5 mt-0.5 rounded shadow-sm ${isTrinity ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-white' : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white'}`}>
+                    {isTrinity ? 'TRINITY' : 'CONFLUENCE'}
+                  </span>
+                )}
+              </div>
+            );
+          })()}
+        </td>
+      );
+      case 'yieldPct': return (
+        <td key="yieldPct" style={getColumnStyle(visibleColumns.yieldPct, '100px')} className="text-right">
+          <div className="text-fintech-muted">{(h.yieldPct || 0).toFixed(2)}%</div>
+          {(h.exDividendDate || h.dividendDate) && (
+            <div className="text-[10px] text-fintech-muted flex flex-col mt-1 items-end opacity-80">
+              {h.exDividendDate && <span>Ex: {new Date(h.exDividendDate).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}</span>}
+              {h.dividendDate && <span>Pay: {new Date(h.dividendDate).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}</span>}
+            </div>
+          )}
+        </td>
+      );
+      case 'sector': return <td key="sector" style={getColumnStyle(visibleColumns.sector, '150px')} className="text-sm text-fintech-muted truncate max-w-[130px]" title={h.sector}>{h.sector || 'Unknown'}</td>;
+      case 'industry': return <td key="industry" style={getColumnStyle(visibleColumns.industry, '150px')} className="text-sm text-fintech-muted truncate max-w-[130px]" title={h.industry}>{h.industry || 'Unknown'}</td>;
+      default: return null;
+    }
   };
 
   return (
@@ -1211,18 +1373,7 @@ export default function Dashboard() {
                 <thead>
                   <tr className="bg-fintech-bg/50 border-b border-fintech-border text-fintech-muted text-sm uppercase tracking-wider">
                     <th style={getColumnStyle(visibleColumns.index, '48px', '48px')} className="font-semibold text-center hidden md:table-cell">#</th>
-                    <SortableHeader label="Symbol" sortKey="symbol" style={getColumnStyle(visibleColumns.symbol, '100px')} />
-                    <SortableHeader label="Shares" sortKey="quantity" alignCenter style={getColumnStyle(visibleColumns.quantity, '100px')} />
-                    <SortableHeader label="Avg Price" sortKey="avgBuyPrice" alignRight style={getColumnStyle(visibleColumns.avgBuyPrice, '120px')} />
-                    <SortableHeader label="Current Price" sortKey="currentPrice" alignRight style={getColumnStyle(visibleColumns.currentPrice, '120px')} />
-                    <SortableHeader label="Port. %" sortKey="portfolioPct" alignRight style={getColumnStyle(visibleColumns.portfolioPct, '100px')} />
-                    <SortableHeader label="Market Value" sortKey="marketValue" alignRight style={getColumnStyle(visibleColumns.marketValue, '140px')} />
-                    <SortableHeader label="Daily Change" sortKey="dailyChange" alignRight style={getColumnStyle(visibleColumns.dailyChange, '140px')} />
-                    <SortableHeader label="Unrealized P/L" sortKey="unrealizedPL" alignRight style={getColumnStyle(visibleColumns.unrealizedPL, '140px')} />
-                    <SortableHeader label="AI Score" sortKey="aiScore" alignRight style={getColumnStyle(visibleColumns.aiScore, '110px')} />
-                    <SortableHeader label="Div Yield" sortKey="yieldPct" alignRight style={getColumnStyle(visibleColumns.yieldPct, '100px')} />
-                    <SortableHeader label="Sector" sortKey="sector" style={getColumnStyle(visibleColumns.sector, '150px')} />
-                    <SortableHeader label="Industry" sortKey="industry" style={getColumnStyle(visibleColumns.industry, '150px')} />
+                    {columnOrder.map(col => renderHeader(col))}
                     <th style={getColumnStyle(visibleColumns.actions, '80px')} className="font-semibold text-center sticky right-0 bg-fintech-card border-l border-fintech-border z-10">Actions</th>
                   </tr>
                 </thead>
@@ -1245,77 +1396,7 @@ export default function Dashboard() {
                             className={`hover:bg-fintech-bg/30 transition-colors group/row ${isExpanded ? 'bg-fintech-bg/10' : ''}`}
                           >
                             <td style={getColumnStyle(visibleColumns.index, '48px', '48px')} className="text-center text-fintech-muted font-medium hidden md:table-cell">{i + 1}</td>
-                            <td 
-                              style={getColumnStyle(visibleColumns.symbol, '100px')} 
-                              className="cursor-pointer group/symbol"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setExplanationSymbol(h.symbol);
-                              }}
-                            >
-                              <div 
-                                className="font-bold flex items-center gap-1.5 group-hover/symbol:text-fintech-accent transition-colors" 
-                                style={{ color: isRowProfit ? 'rgba(138, 255, 213, 0.8)' : 'rgba(243, 129, 129, 0.8)' }}
-                              >
-                                <span>{h.symbol}</span>
-                                <Info size={12} className="opacity-0 group-hover/symbol:opacity-100 text-fintech-accent transition-all transform translate-x-1 group-hover/symbol:translate-x-0" />
-                              </div>
-                              <div className="text-xs text-fintech-muted opacity-80 mt-0.5 group-hover/symbol:text-slate-300 transition-colors">{h.name}</div>
-                            </td>
-                            <td style={getColumnStyle(visibleColumns.quantity, '100px')} className="text-center font-medium">{hideValues ? '****' : h.quantity}</td>
-                            <td style={getColumnStyle(visibleColumns.avgBuyPrice, '120px')} className="text-right text-fintech-muted">{hideValues ? '****' : formatCurrency(convertValue(h.avgBuyPrice, h.currency))}</td>
-                            <td style={getColumnStyle(visibleColumns.currentPrice, '120px')} className="text-right font-medium">{formatCurrency(convertValue(h.currentPrice, h.currency))}</td>
-                            <td style={getColumnStyle(visibleColumns.portfolioPct, '100px')} className="text-right font-medium text-fintech-accent tracking-wide">
-                              {totalMarketValue > 0 && h.marketValue ? ((h.marketValue / totalMarketValue) * 100).toFixed(2) : '0.00'}%
-                            </td>
-                            <td style={getColumnStyle(visibleColumns.marketValue, '140px')} className="text-right font-semibold text-white">
-                              {hideValues ? '****' : formatCurrency(convertValue(h.marketValue || 0, h.currency))}
-                            </td>
-                            <td style={getColumnStyle(visibleColumns.dailyChange, '140px')} className={`text-right font-bold ${(h.dailyChange || 0) >= 0 ? 'text-fintech-profit' : 'text-fintech-loss'}`}>
-                              <div className="flex flex-col items-end">
-                                <span>{hideValues ? '****' : `${(h.dailyChange || 0) >= 0 ? '+' : ''}${formatCurrency(convertValue((h.dailyChange || 0) * h.quantity, h.currency))}`}</span>
-                                <span className="text-sm opacity-80">{(h.dailyChangePct || 0) >= 0 ? '+' : ''}{(h.dailyChangePct || 0).toFixed(2)}%</span>
-                              </div>
-                            </td>
-                            <td style={getColumnStyle(visibleColumns.unrealizedPL, '140px')} className={`text-right font-bold ${isRowProfit ? 'text-fintech-profit' : 'text-fintech-loss'}`}>
-                              <div className="flex flex-col items-end">
-                                <span>{hideValues ? '****' : `${isRowProfit ? '+' : ''}${formatCurrency(convertValue(h.unrealizedPL || 0, h.currency))}`}</span>
-                                <span className="text-sm opacity-80">{isRowProfit ? '+' : ''}{(h.unrealizedPLPercent || 0).toFixed(2)}%</span>
-                              </div>
-                            </td>
-                            <td style={getColumnStyle(visibleColumns.aiScore, '110px')} className="text-right">
-                              {(() => {
-                                const aiData = aiResults.find(r => r.symbol === h.symbol);
-                                if (!aiData) return <span className="text-fintech-muted text-xs opacity-50">-</span>;
-                                const isTrinity = aiData.garpScore >= 75 && aiData.moatScore >= 75 && aiData.valueScore >= 75;
-                                const isConfluence = !isTrinity && [aiData.garpScore, aiData.moatScore, aiData.valueScore].filter((s: number) => s >= 75).length >= 2;
-                                return (
-                                  <div className="flex flex-col items-end gap-0.5">
-                                    <div className="flex items-center gap-1 text-[10px]">
-                                      <span className="text-indigo-300 font-medium" title={`GARP: ${aiData.garpScore}`}>G:{aiData.garpScore}</span>
-                                      <span className="text-purple-300 font-medium" title={`Moat: ${aiData.moatScore}`}>M:{aiData.moatScore}</span>
-                                      <span className="text-amber-300 font-medium" title={`Value: ${aiData.valueScore}`}>V:{aiData.valueScore}</span>
-                                    </div>
-                                    {(isTrinity || isConfluence) && (
-                                      <span className={`text-[9px] font-bold px-1.5 py-0.5 mt-0.5 rounded shadow-sm ${isTrinity ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-white' : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white'}`}>
-                                        {isTrinity ? 'TRINITY' : 'CONFLUENCE'}
-                                      </span>
-                                    )}
-                                  </div>
-                                );
-                              })()}
-                            </td>
-                            <td style={getColumnStyle(visibleColumns.yieldPct, '100px')} className="text-right">
-                              <div className="text-fintech-muted">{(h.yieldPct || 0).toFixed(2)}%</div>
-                              {(h.exDividendDate || h.dividendDate) && (
-                                <div className="text-[10px] text-fintech-muted flex flex-col mt-1 items-end opacity-80">
-                                  {h.exDividendDate && <span>Ex: {new Date(h.exDividendDate).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}</span>}
-                                  {h.dividendDate && <span>Pay: {new Date(h.dividendDate).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}</span>}
-                                </div>
-                              )}
-                            </td>
-                            <td style={getColumnStyle(visibleColumns.sector, '150px')} className="text-sm text-fintech-muted truncate max-w-[130px]" title={h.sector}>{h.sector || 'Unknown'}</td>
-                            <td style={getColumnStyle(visibleColumns.industry, '150px')} className="text-sm text-fintech-muted truncate max-w-[130px]" title={h.industry}>{h.industry || 'Unknown'}</td>
+                            {columnOrder.map(col => renderCell(col, h, isRowProfit, hideValues))}
                             <td 
                               style={getColumnStyle(visibleColumns.actions, '80px')} 
                               className="text-center text-fintech-muted sticky right-0 bg-fintech-card border-l border-fintech-border z-10 cursor-pointer hover:bg-fintech-border/30 transition-colors"
