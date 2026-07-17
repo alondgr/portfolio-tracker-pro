@@ -69,7 +69,7 @@ export default function Dashboard() {
   // AI State
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResults, setAiResults] = useState<any[]>([]);
-  const [aiModelView, setAiModelView] = useState<'garp' | 'moat' | 'confluence'>('confluence');
+  const [aiModelView, setAiModelView] = useState<'garp' | 'moat' | 'value' | 'confluence'>('confluence');
 
   // Portfolio Multi-Select State
   const [selectedPortfolioSymbols, setSelectedPortfolioSymbols] = useState<string[]>([]);
@@ -847,7 +847,7 @@ export default function Dashboard() {
       const getScore = (symbol: string) => {
         const aiData = aiResults.find(r => r.symbol === symbol);
         if (!aiData) return 0;
-        return (aiData.garpScore + aiData.moatScore) / 2;
+        return (aiData.garpScore + aiData.moatScore + aiData.valueScore) / 3;
       };
       const aValScore = getScore(a.symbol);
       const bValScore = getScore(b.symbol);
@@ -1279,17 +1279,20 @@ export default function Dashboard() {
                               {(() => {
                                 const aiData = aiResults.find(r => r.symbol === h.symbol);
                                 if (!aiData) return <span className="text-fintech-muted text-xs opacity-50">-</span>;
-                                const isConfluence = aiData.garpScore >= 75 && aiData.moatScore >= 75;
+                                const isTrinity = aiData.garpScore >= 75 && aiData.moatScore >= 75 && aiData.valueScore >= 75;
+                                const isConfluence = !isTrinity && [aiData.garpScore, aiData.moatScore, aiData.valueScore].filter((s: number) => s >= 75).length >= 2;
                                 return (
                                   <div className="flex flex-col items-end gap-0.5">
-                                    <div className="flex items-center gap-1.5 text-xs">
+                                    <div className="flex items-center gap-1 text-[10px]">
                                       <span className="text-indigo-300 font-medium" title={`GARP: ${aiData.garpScore}`}>G:{aiData.garpScore}</span>
                                       <span className="text-purple-300 font-medium" title={`Moat: ${aiData.moatScore}`}>M:{aiData.moatScore}</span>
+                                      <span className="text-amber-300 font-medium" title={`Value: ${aiData.valueScore}`}>V:{aiData.valueScore}</span>
                                     </div>
-                                    {isConfluence && (
-                                      <span className="text-[9px] bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold px-1 py-0.5 mt-0.5 rounded shadow-sm">
-                                        CONFLUENCE
-                                      </span>
+                                    {isTrinity && (
+                                    {showConfluenceBadge && (
+                                     <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm ${isTrinity ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-white' : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white'}`}>
+                                       {isTrinity ? 'TRINITY' : 'CONFLUENCE'}
+                                     </span>
                                     )}
                                   </div>
                                 );
@@ -1549,6 +1552,12 @@ export default function Dashboard() {
                     >
                       🏰 Fortress Moat
                     </button>
+                    <button
+                      onClick={() => setAiModelView('value')}
+                      className={`px-3 py-1.5 rounded-md transition-colors ${aiModelView === 'value' ? 'bg-amber-500/20 text-amber-300' : 'text-fintech-muted hover:text-white'}`}
+                    >
+                      💎 Deep Value
+                    </button>
                   </div>
                 )}
               </div>
@@ -1585,8 +1594,8 @@ export default function Dashboard() {
                    if (!aiB) return -1;
 
                    if (aiModelView === 'confluence') {
-                     const isConfluenceA = aiA.garpScore >= 75 && aiA.moatScore >= 75;
-                     const isConfluenceB = aiB.garpScore >= 75 && aiB.moatScore >= 75;
+                     const isConfluenceA = [aiA.garpScore, aiA.moatScore, aiA.valueScore].filter((s: number) => s >= 75).length >= 2;
+                     const isConfluenceB = [aiB.garpScore, aiB.moatScore, aiB.valueScore].filter((s: number) => s >= 75).length >= 2;
                      
                      if (isConfluenceA && !isConfluenceB) return -1;
                      if (isConfluenceB && !isConfluenceA) return 1;
@@ -1594,8 +1603,8 @@ export default function Dashboard() {
                      if (a.isStarred && !b.isStarred) return -1;
                      if (b.isStarred && !a.isStarred) return 1;
                      
-                     const avgA = (aiA.garpScore + aiA.moatScore) / 2;
-                     const avgB = (aiB.garpScore + aiB.moatScore) / 2;
+                     const avgA = (aiA.garpScore + aiA.moatScore + aiA.valueScore) / 3;
+                     const avgB = (aiB.garpScore + aiB.moatScore + aiB.valueScore) / 3;
                      
                      if (avgB !== avgA) return avgB - avgA;
                      return (aiB.upsidePct || 0) - (aiA.upsidePct || 0);
@@ -1633,6 +1642,23 @@ export default function Dashboard() {
                      
                      if (aiB.moatScore !== aiA.moatScore) return aiB.moatScore - aiA.moatScore;
                      return (aiB.upsidePct || 0) - (aiA.upsidePct || 0);
+                   } else if (aiModelView === 'value') {
+                     const sortedValue = [...aiResults].sort((x, y) => {
+                       if (y.valueScore !== x.valueScore) return y.valueScore - x.valueScore;
+                       return (y.upsidePct || 0) - (x.upsidePct || 0);
+                     });
+                     
+                     const isTopValueA = sortedValue[0]?.symbol === a.symbol;
+                     const isTopValueB = sortedValue[0]?.symbol === b.symbol;
+                     
+                     if (isTopValueA && !isTopValueB) return -1;
+                     if (isTopValueB && !isTopValueA) return 1;
+                     
+                     if (a.isStarred && !b.isStarred) return -1;
+                     if (b.isStarred && !a.isStarred) return 1;
+                     
+                     if (aiB.valueScore !== aiA.valueScore) return aiB.valueScore - aiA.valueScore;
+                     return (aiB.upsidePct || 0) - (aiA.upsidePct || 0);
                    }
                  }
                  return (b.isStarred ? 1 : 0) - (a.isStarred ? 1 : 0);
@@ -1644,10 +1670,14 @@ export default function Dashboard() {
                  let showConfluenceBadge = false;
                  
                  if (aiResults.length > 0 && aiData) {
-                   const isConfluence = aiData.garpScore >= 75 && aiData.moatScore >= 75;
+                   const isTrinity = aiData.garpScore >= 75 && aiData.moatScore >= 75 && aiData.valueScore >= 75;
+                   const isConfluence = !isTrinity && [aiData.garpScore, aiData.moatScore, aiData.valueScore].filter((s: number) => s >= 75).length >= 2;
                    
                    if (aiModelView === 'confluence') {
-                     if (isConfluence) {
+                     if (isTrinity) {
+                       cardBorderClass = 'border-amber-400/70 shadow-[0_0_25px_rgba(251,191,36,0.3)]';
+                       showConfluenceBadge = true;
+                     } else if (isConfluence) {
                        cardBorderClass = 'border-emerald-400/70 shadow-[0_0_25px_rgba(16,185,129,0.25)]';
                        showConfluenceBadge = true;
                      } else {
@@ -1676,6 +1706,17 @@ export default function Dashboard() {
                        return (y.upsidePct || 0) - (x.upsidePct || 0);
                      });
                      if (sortedMoat[0]?.symbol === w.symbol) {
+                       cardBorderClass = 'border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.2)]';
+                       showTopPickBadge = true;
+                     } else if (w.isStarred) {
+                       cardBorderClass = 'border-amber-400/50 shadow-[0_0_15px_rgba(251,191,36,0.1)]';
+                     }
+                   } else if (aiModelView === 'value') {
+                     const sortedValue = [...aiResults].sort((x, y) => {
+                       if (y.valueScore !== x.valueScore) return y.valueScore - x.valueScore;
+                       return (y.upsidePct || 0) - (x.upsidePct || 0);
+                     });
+                     if (sortedValue[0]?.symbol === w.symbol) {
                        cardBorderClass = 'border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.2)]';
                        showTopPickBadge = true;
                      } else if (w.isStarred) {
@@ -1784,22 +1825,26 @@ export default function Dashboard() {
                               <span className="flex items-center gap-1"><Sparkles size={10} /> AI Score:</span>
                             ) : aiModelView === 'garp' ? (
                               <span className="flex items-center gap-1"><TrendingUp size={10} /> GARP Score:</span>
-                            ) : (
+                            ) : aiModelView === 'moat' ? (
                               <span className="flex items-center gap-1"><Building2 size={10} /> Moat Score:</span>
+                            ) : (
+                              <span className="flex items-center gap-1">💎 Value Score:</span>
                             )}
                           </span>
                           <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                            (aiModelView === 'confluence' ? (aiData.garpScore + aiData.moatScore)/2 : aiModelView === 'garp' ? aiData.garpScore : aiData.moatScore) > 70 
+                            (aiModelView === 'confluence' ? (aiData.garpScore + aiData.moatScore + aiData.valueScore)/3 : aiModelView === 'garp' ? aiData.garpScore : aiModelView === 'moat' ? aiData.moatScore : aiData.valueScore) > 70 
                               ? 'bg-emerald-500/20 text-emerald-400' 
-                              : (aiModelView === 'confluence' ? (aiData.garpScore + aiData.moatScore)/2 : aiModelView === 'garp' ? aiData.garpScore : aiData.moatScore) > 50 
+                              : (aiModelView === 'confluence' ? (aiData.garpScore + aiData.moatScore + aiData.valueScore)/3 : aiModelView === 'garp' ? aiData.garpScore : aiModelView === 'moat' ? aiData.moatScore : aiData.valueScore) > 50 
                                 ? 'bg-amber-500/20 text-amber-400' 
                                 : 'bg-rose-500/20 text-rose-400'
                           }`}>
                             {aiModelView === 'confluence' 
-                              ? `${Math.round((aiData.garpScore + aiData.moatScore) / 2)}/100` 
+                              ? `${Math.round((aiData.garpScore + aiData.moatScore + aiData.valueScore) / 3)}/100` 
                               : aiModelView === 'garp' 
                                 ? `${aiData.garpScore}/100` 
-                                : `${aiData.moatScore}/100`}
+                                : aiModelView === 'moat'
+                                  ? `${aiData.moatScore}/100`
+                                  : `${aiData.valueScore}/100`}
                           </span>
                         </div>
 
@@ -1815,11 +1860,16 @@ export default function Dashboard() {
                               <div className="text-purple-400 font-semibold mb-0.5">Moat</div>
                               <div className="text-white text-[11px]">{aiData.moatScore}</div>
                             </div>
+                            <div className="w-px bg-fintech-border/30 self-stretch" />
+                            <div className="flex-1">
+                              <div className="text-amber-400 font-semibold mb-0.5">Value</div>
+                              <div className="text-white text-[11px]">{aiData.valueScore}</div>
+                            </div>
                           </div>
                         )}
 
                         <ul className="text-[10px] text-fintech-muted space-y-1">
-                          {(aiModelView === 'moat' ? aiData.moatReasons : aiData.garpReasons).map((r: string, idx: number) => (
+                          {(aiModelView === 'moat' ? aiData.moatReasons : aiModelView === 'garp' ? aiData.garpReasons : aiModelView === 'value' ? aiData.valueReasons : [...(aiData.garpReasons||[]), ...(aiData.moatReasons||[]), ...(aiData.valueReasons||[])]).map((r: string, idx: number) => (
                             <li key={idx} className="flex gap-1 items-start">
                               <div className="text-indigo-400 mt-0.5">•</div>
                               <span className="leading-tight">{r}</span>

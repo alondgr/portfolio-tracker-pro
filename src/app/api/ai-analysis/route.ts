@@ -19,13 +19,14 @@ export async function POST(request: Request) {
     for (const symbol of symbols) {
       try {
         const summary = await yahooFinance.quoteSummary(symbol, { 
-          modules: ['financialData', 'defaultKeyStatistics', 'assetProfile', 'price'] 
+          modules: ['financialData', 'defaultKeyStatistics', 'assetProfile', 'price', 'summaryDetail'] 
         }) as any;
 
         const financialData = summary.financialData || {};
         const keyStats = summary.defaultKeyStatistics || {};
         const profile = summary.assetProfile || {};
         const price = summary.price || {};
+        const summaryDetail = summary.summaryDetail || {};
 
         let score = 50; // GARP base score
         let reasons = [];
@@ -161,12 +162,66 @@ export async function POST(request: Request) {
 
         const finalMoatScore = Math.min(Math.max(moatScore, 10), 99);
 
+        // ================= ENGINE 3: DEEP VALUE SCORING =================
+        let valueScore = 50; // Value base score
+        let valueReasons = [];
+
+        // Price to Book
+        if (priceToBook > 0) {
+          if (priceToBook < 1.5) {
+            valueScore += 20;
+            valueReasons.push("Deeply discounted tangible assets (P/B < 1.5).");
+          } else if (priceToBook < 3.0) {
+            valueScore += 10;
+          } else if (priceToBook > 10.0) {
+            valueScore -= 10;
+            valueReasons.push("High premium to book value indicates low margin of safety.");
+          }
+        }
+
+        // EV / EBITDA
+        const evToEbitda = keyStats.enterpriseToEbitda || 0;
+        if (evToEbitda > 0) {
+          if (evToEbitda < 8) {
+            valueScore += 15;
+            valueReasons.push("Extremely cheap operating cash valuation (EV/EBITDA < 8).");
+          } else if (evToEbitda < 12) {
+            valueScore += 5;
+          } else if (evToEbitda > 25) {
+            valueScore -= 10;
+            valueReasons.push("Expensive enterprise valuation relative to cash generation.");
+          }
+        }
+
+        // Price to Sales
+        const priceToSales = summaryDetail.priceToSalesTrailing12Months || keyStats.priceToSalesTrailing12Months || 0;
+        if (priceToSales > 0) {
+          if (priceToSales < 2) {
+            valueScore += 15;
+            valueReasons.push("Low revenue multiple offers strong contrarian value.");
+          } else if (priceToSales > 10) {
+            valueScore -= 10;
+            valueReasons.push("Priced for perfection with high Price-to-Sales (>10x).");
+          }
+        }
+        
+        // Dividend Yield (Value buffer)
+        const divYield = summaryDetail.dividendYield || 0;
+        if (divYield > 0.04) {
+          valueScore += 10;
+          valueReasons.push("Strong dividend yield (>4%) provides a tangible margin of safety.");
+        }
+
+        const finalValueScore = Math.min(Math.max(valueScore, 10), 99);
+
         analysisResults.push({
           symbol,
           garpScore,
           moatScore: finalMoatScore,
+          valueScore: finalValueScore,
           garpReasons: reasons.slice(0, 2),
           moatReasons: moatReasons.slice(0, 2),
+          valueReasons: valueReasons.slice(0, 2),
           upsidePct,
         });
         
@@ -176,8 +231,10 @@ export async function POST(request: Request) {
           symbol,
           garpScore: 50,
           moatScore: 50,
+          valueScore: 50,
           garpReasons: ["Insufficient financial data for growth analysis."],
           moatReasons: ["Insufficient asset data for moat analysis."],
+          valueReasons: ["Insufficient fundamental data for value analysis."],
           upsidePct: 0
         });
       }
@@ -185,8 +242,8 @@ export async function POST(request: Request) {
 
     // Sort by combined dynamic value or garpScore by default
     analysisResults.sort((a, b) => {
-      const avgA = (a.garpScore + a.moatScore) / 2;
-      const avgB = (b.garpScore + b.moatScore) / 2;
+      const avgA = (a.garpScore + a.moatScore + a.valueScore) / 3;
+      const avgB = (b.garpScore + b.moatScore + b.valueScore) / 3;
       if (avgB !== avgA) {
         return avgB - avgA;
       }
