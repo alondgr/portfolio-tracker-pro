@@ -33,10 +33,11 @@ export async function POST(request: Request) {
           const actualLower = actualName.toLowerCase();
           const expectedLower = expectedName.toLowerCase();
           
-          // Use the first significant word of the expected name for loose matching
-          const firstWord = expectedLower.split(/[\s,]+/)[0].replace(/[^a-z0-9]/g, '');
+          const firstWord = expectedLower.split(/[\s,]+/)[0];
+          const cleanFirstWord = firstWord.replace(/[^a-z0-9]/g, '');
+          const cleanActualLower = actualLower.replace(/[^a-z0-9]/g, '');
           
-          if (firstWord.length > 2 && !actualLower.includes(firstWord)) {
+          if (cleanFirstWord.length > 2 && !cleanActualLower.includes(cleanFirstWord)) {
             const errorMsg = `[Guardrail Failure] Ticker ${symbol} returned name "${actualName}" which doesn't match database context "${expectedName}". Skipping scoring.`;
             console.error(errorMsg);
             throw new Error(errorMsg);
