@@ -67,7 +67,7 @@ export default function Dashboard() {
   
   // Trinity Screener state
   const [screenerTabActive, setScreenerTabActive] = useState(false);
-  const [activeScreenerPool, setActiveScreenerPool] = useState<'trinity'|'trending'>('trinity');
+  const [activeScreenerPool, setActiveScreenerPool] = useState<'trinity'|'trending'|'smallcap'>('trinity');
   const [screenerResults, setScreenerResults] = useState<any[]>([]);
   const [screenerLoading, setScreenerLoading] = useState(false);
   const [screenerError, setScreenerError] = useState<string | null>(null);
@@ -75,6 +75,10 @@ export default function Dashboard() {
   const [trendingResults, setTrendingResults] = useState<any[]>([]);
   const [trendingLoading, setTrendingLoading] = useState(false);
   const [trendingError, setTrendingError] = useState<string | null>(null);
+  
+  const [smallcapResults, setSmallcapResults] = useState<any[]>([]);
+  const [smallcapLoading, setSmallcapLoading] = useState(false);
+  const [smallcapError, setSmallcapError] = useState<string | null>(null);
   const [explanationSymbol, setExplanationSymbol] = useState<string | null>(null);
   const [isExplanationExpanded, setIsExplanationExpanded] = useState(false);
   
@@ -513,6 +517,28 @@ export default function Dashboard() {
       setTrendingError('Network error while running trending screener');
     } finally {
       setTrendingLoading(false);
+    }
+  };
+
+  const runSmallcapScreener = async () => {
+    if (smallcapResults.length > 0) return;
+    
+    setSmallcapLoading(true);
+    setSmallcapError(null);
+    try {
+      const res = await fetch('/api/smallcap-screener', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        setSmallcapResults(data.results || []);
+      } else {
+        const err = await res.json();
+        setSmallcapError(err.error || 'Failed to run small-cap screener');
+      }
+    } catch (err) {
+      console.error(err);
+      setSmallcapError('Network error while running small-cap screener');
+    } finally {
+      setSmallcapLoading(false);
     }
   };
 
@@ -2553,30 +2579,39 @@ export default function Dashboard() {
                   <button
                     type="button"
                     onClick={() => setActiveScreenerPool('trinity')}
-                    className={`flex-1 py-2 px-3 rounded-lg transition-all text-center ${activeScreenerPool === 'trinity' ? 'bg-fintech-card text-white shadow-sm border border-fintech-border/50' : 'text-fintech-muted hover:text-white'}`}
+                    className={`flex-1 py-2 px-1 sm:px-3 rounded-lg transition-all text-center ${activeScreenerPool === 'trinity' ? 'bg-fintech-card text-white shadow-sm border border-fintech-border/50' : 'text-fintech-muted hover:text-white'}`}
                   >
                     🎯 AI Trinity
                   </button>
                   <button
                     type="button"
                     onClick={() => { setActiveScreenerPool('trending'); if (trendingResults.length === 0) runTrendingScreener(); }}
-                    className={`flex-1 py-2 px-3 rounded-lg transition-all text-center ${activeScreenerPool === 'trending' ? 'bg-fintech-card text-white shadow-sm border border-fintech-border/50' : 'text-fintech-muted hover:text-white'}`}
+                    className={`flex-1 py-2 px-1 sm:px-3 rounded-lg transition-all text-center ${activeScreenerPool === 'trending' ? 'bg-fintech-card text-white shadow-sm border border-fintech-border/50' : 'text-fintech-muted hover:text-white'}`}
                   >
                     🔥 Trending
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setActiveScreenerPool('smallcap'); if (smallcapResults.length === 0) runSmallcapScreener(); }}
+                    className={`flex-1 py-2 px-1 sm:px-3 rounded-lg transition-all text-center ${activeScreenerPool === 'smallcap' ? 'bg-fintech-card text-white shadow-sm border border-fintech-border/50' : 'text-fintech-muted hover:text-white'}`}
+                  >
+                    🚀 Small-Cap
                   </button>
                 </div>
 
                 <div className="text-sm text-fintech-muted mb-4">
                   {activeScreenerPool === 'trinity' 
                     ? "Scan a curated pool of top US stocks to find hidden Trinity or Confluence AI opportunities right now."
-                    : "Scan live market trends from the street (top gainers, most actives) and find hidden AI opportunities."}
+                    : activeScreenerPool === 'trending'
+                    ? "Scan live market trends from the street (top gainers, most actives) and find hidden AI opportunities."
+                    : "Scan aggressive, high-growth small-cap stocks (with an adjusted AI curve) to find the next big winners."}
                 </div>
                 
-                {(activeScreenerPool === 'trinity' ? screenerError : trendingError) && <div className="text-xs text-rose-400 bg-rose-500/10 p-3 rounded-xl border border-rose-500/20">{activeScreenerPool === 'trinity' ? screenerError : trendingError}</div>}
+                {(activeScreenerPool === 'trinity' ? screenerError : activeScreenerPool === 'trending' ? trendingError : smallcapError) && <div className="text-xs text-rose-400 bg-rose-500/10 p-3 rounded-xl border border-rose-500/20">{activeScreenerPool === 'trinity' ? screenerError : activeScreenerPool === 'trending' ? trendingError : smallcapError}</div>}
                 
-                {(activeScreenerPool === 'trinity' ? screenerResults : trendingResults).length > 0 ? (
+                {(activeScreenerPool === 'trinity' ? screenerResults : activeScreenerPool === 'trending' ? trendingResults : smallcapResults).length > 0 ? (
                   <div className="max-h-60 overflow-y-auto custom-scrollbar space-y-2 pr-2">
-                    {(activeScreenerPool === 'trinity' ? screenerResults : trendingResults).map((r, i) => (
+                    {(activeScreenerPool === 'trinity' ? screenerResults : activeScreenerPool === 'trending' ? trendingResults : smallcapResults).map((r, i) => (
                       <button 
                         key={i}
                         type="button"
@@ -2620,12 +2655,12 @@ export default function Dashboard() {
                   </button>
                   <button
                     type="button"
-                    onClick={activeScreenerPool === 'trinity' ? runTrinityScreener : runTrendingScreener}
-                    disabled={activeScreenerPool === 'trinity' ? screenerLoading : trendingLoading}
+                    onClick={activeScreenerPool === 'trinity' ? runTrinityScreener : activeScreenerPool === 'trending' ? runTrendingScreener : runSmallcapScreener}
+                    disabled={activeScreenerPool === 'trinity' ? screenerLoading : activeScreenerPool === 'trending' ? trendingLoading : smallcapLoading}
                     className="flex-1 py-3 px-4 rounded-xl font-medium text-white bg-fintech-accent hover:bg-blue-600 transition-colors shadow-[0_0_15px_rgba(59,130,246,0.4)] disabled:opacity-50 flex justify-center items-center gap-2"
                   >
-                    {(activeScreenerPool === 'trinity' ? screenerLoading : trendingLoading) ? <RefreshCw size={18} className="animate-spin" /> : <Search size={18} />}
-                    {(activeScreenerPool === 'trinity' ? screenerLoading : trendingLoading) ? 'Scanning...' : ((activeScreenerPool === 'trinity' ? screenerResults : trendingResults).length > 0 ? 'Rescan Market' : 'Scan Market')}
+                    {(activeScreenerPool === 'trinity' ? screenerLoading : activeScreenerPool === 'trending' ? trendingLoading : smallcapLoading) ? <RefreshCw size={18} className="animate-spin" /> : <Search size={18} />}
+                    {(activeScreenerPool === 'trinity' ? screenerLoading : activeScreenerPool === 'trending' ? trendingLoading : smallcapLoading) ? 'Scanning...' : ((activeScreenerPool === 'trinity' ? screenerResults : activeScreenerPool === 'trending' ? trendingResults : smallcapResults).length > 0 ? 'Rescan Market' : 'Scan Market')}
                   </button>
                 </div>
               </div>
