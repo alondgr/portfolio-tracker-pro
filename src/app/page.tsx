@@ -460,12 +460,17 @@ export default function Dashboard() {
   const runAiAnalysis = async () => {
     const symbols = Array.from(new Set([...watchlist.map(w => w.symbol), ...holdings.map(h => h.symbol)]));
     if (symbols.length === 0) return;
+    
+    const expectedNames: Record<string, string> = {};
+    watchlist.forEach(w => { if(w.name) expectedNames[w.symbol] = w.name; });
+    holdings.forEach(h => { if(h.name) expectedNames[h.symbol] = h.name; });
+
     setAiLoading(true);
     try {
       const res = await fetch('/api/ai-analysis', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symbols })
+        body: JSON.stringify({ symbols, expectedNames })
       });
       if (res.ok) {
         const data = await res.json();

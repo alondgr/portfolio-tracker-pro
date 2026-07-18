@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { symbols } = body;
+    const { symbols, expectedNames } = body;
 
     if (!symbols || !Array.isArray(symbols) || symbols.length === 0) {
       return NextResponse.json({ error: 'No symbols provided' }, { status: 400 });
@@ -22,10 +22,30 @@ export async function POST(request: Request) {
           modules: ['financialData', 'defaultKeyStatistics', 'assetProfile', 'price', 'summaryDetail'] 
         }) as any;
 
-        const financialData = summary.financialData || {};
-        const keyStats = summary.defaultKeyStatistics || {};
         const profile = summary.assetProfile || {};
         const price = summary.price || {};
+
+        // ================= GUARDRAIL: COMPANY NAME VALIDATION =================
+        const actualName = profile.longName || price.longName || price.shortName || "";
+        const expectedName = expectedNames ? expectedNames[symbol] : null;
+
+        if (expectedName && actualName) {
+          const actualLower = actualName.toLowerCase();
+          const expectedLower = expectedName.toLowerCase();
+          
+          // Use the first significant word of the expected name for loose matching
+          const firstWord = expectedLower.split(/[\s,]+/)[0].replace(/[^a-z0-9]/g, '');
+          
+          if (firstWord.length > 2 && !actualLower.includes(firstWord)) {
+            const errorMsg = `[Guardrail Failure] Ticker ${symbol} returned name "${actualName}" which doesn't match database context "${expectedName}". Skipping scoring.`;
+            console.error(errorMsg);
+            throw new Error(errorMsg);
+          }
+        }
+        // ======================================================================
+
+        const financialData = summary.financialData || {};
+        const keyStats = summary.defaultKeyStatistics || {};
         const summaryDetail = summary.summaryDetail || {};
 
         let score = 50; // GARP base score
