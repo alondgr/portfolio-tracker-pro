@@ -67,9 +67,14 @@ export default function Dashboard() {
   
   // Trinity Screener state
   const [screenerTabActive, setScreenerTabActive] = useState(false);
+  const [activeScreenerPool, setActiveScreenerPool] = useState<'trinity'|'trending'>('trinity');
   const [screenerResults, setScreenerResults] = useState<any[]>([]);
   const [screenerLoading, setScreenerLoading] = useState(false);
   const [screenerError, setScreenerError] = useState<string | null>(null);
+  
+  const [trendingResults, setTrendingResults] = useState<any[]>([]);
+  const [trendingLoading, setTrendingLoading] = useState(false);
+  const [trendingError, setTrendingError] = useState<string | null>(null);
   const [explanationSymbol, setExplanationSymbol] = useState<string | null>(null);
   const [isExplanationExpanded, setIsExplanationExpanded] = useState(false);
   
@@ -486,6 +491,28 @@ export default function Dashboard() {
       setScreenerError('Network error while running screener');
     } finally {
       setScreenerLoading(false);
+    }
+  };
+
+  const runTrendingScreener = async () => {
+    if (trendingResults.length > 0) return; // Don't refetch if we already have them
+    
+    setTrendingLoading(true);
+    setTrendingError(null);
+    try {
+      const res = await fetch('/api/trending-screener', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        setTrendingResults(data.results || []);
+      } else {
+        const err = await res.json();
+        setTrendingError(err.error || 'Failed to run trending screener');
+      }
+    } catch (err) {
+      console.error(err);
+      setTrendingError('Network error while running trending screener');
+    } finally {
+      setTrendingLoading(false);
     }
   };
 
@@ -2522,15 +2549,34 @@ export default function Dashboard() {
             </form>
             ) : (
               <div className="space-y-4">
+                <div className="flex bg-slate-900 border border-fintech-border p-1 rounded-xl mb-4 text-xs font-medium">
+                  <button
+                    type="button"
+                    onClick={() => setActiveScreenerPool('trinity')}
+                    className={`flex-1 py-2 px-3 rounded-lg transition-all text-center ${activeScreenerPool === 'trinity' ? 'bg-fintech-card text-white shadow-sm border border-fintech-border/50' : 'text-fintech-muted hover:text-white'}`}
+                  >
+                    🎯 AI Trinity
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setActiveScreenerPool('trending'); if (trendingResults.length === 0) runTrendingScreener(); }}
+                    className={`flex-1 py-2 px-3 rounded-lg transition-all text-center ${activeScreenerPool === 'trending' ? 'bg-fintech-card text-white shadow-sm border border-fintech-border/50' : 'text-fintech-muted hover:text-white'}`}
+                  >
+                    🔥 Trending
+                  </button>
+                </div>
+
                 <div className="text-sm text-fintech-muted mb-4">
-                  Scan a curated pool of top US stocks to find hidden Trinity or Confluence AI opportunities right now.
+                  {activeScreenerPool === 'trinity' 
+                    ? "Scan a curated pool of top US stocks to find hidden Trinity or Confluence AI opportunities right now."
+                    : "Scan live market trends from the street (top gainers, most actives) and find hidden AI opportunities."}
                 </div>
                 
-                {screenerError && <div className="text-xs text-rose-400 bg-rose-500/10 p-3 rounded-xl border border-rose-500/20">{screenerError}</div>}
+                {(activeScreenerPool === 'trinity' ? screenerError : trendingError) && <div className="text-xs text-rose-400 bg-rose-500/10 p-3 rounded-xl border border-rose-500/20">{activeScreenerPool === 'trinity' ? screenerError : trendingError}</div>}
                 
-                {screenerResults.length > 0 ? (
+                {(activeScreenerPool === 'trinity' ? screenerResults : trendingResults).length > 0 ? (
                   <div className="max-h-60 overflow-y-auto custom-scrollbar space-y-2 pr-2">
-                    {screenerResults.map((r, i) => (
+                    {(activeScreenerPool === 'trinity' ? screenerResults : trendingResults).map((r, i) => (
                       <button 
                         key={i}
                         type="button"
@@ -2574,12 +2620,12 @@ export default function Dashboard() {
                   </button>
                   <button
                     type="button"
-                    onClick={runTrinityScreener}
-                    disabled={screenerLoading}
+                    onClick={activeScreenerPool === 'trinity' ? runTrinityScreener : runTrendingScreener}
+                    disabled={activeScreenerPool === 'trinity' ? screenerLoading : trendingLoading}
                     className="flex-1 py-3 px-4 rounded-xl font-medium text-white bg-fintech-accent hover:bg-blue-600 transition-colors shadow-[0_0_15px_rgba(59,130,246,0.4)] disabled:opacity-50 flex justify-center items-center gap-2"
                   >
-                    {screenerLoading ? <RefreshCw size={18} className="animate-spin" /> : <Search size={18} />}
-                    {screenerLoading ? 'Scanning...' : (screenerResults.length > 0 ? 'Rescan Market' : 'Scan Market')}
+                    {(activeScreenerPool === 'trinity' ? screenerLoading : trendingLoading) ? <RefreshCw size={18} className="animate-spin" /> : <Search size={18} />}
+                    {(activeScreenerPool === 'trinity' ? screenerLoading : trendingLoading) ? 'Scanning...' : ((activeScreenerPool === 'trinity' ? screenerResults : trendingResults).length > 0 ? 'Rescan Market' : 'Scan Market')}
                   </button>
                 </div>
               </div>
