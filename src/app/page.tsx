@@ -75,7 +75,7 @@ export default function Dashboard() {
   // AI State
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResults, setAiResults] = useState<any[]>([]);
-  const [aiModelView, setAiModelView] = useState<'garp' | 'moat' | 'value' | 'confluence'>('confluence');
+  const [aiModelView, setAiModelView] = useState<'garp' | 'moat' | 'value' | 'confluence' | 'trinity'>('confluence');
 
   // Portfolio Multi-Select State
   const [selectedPortfolioSymbols, setSelectedPortfolioSymbols] = useState<string[]>([]);
@@ -1655,6 +1655,12 @@ export default function Dashboard() {
                 {aiResults.length > 0 && (
                   <div className="flex bg-slate-900 border border-fintech-border p-0.5 rounded-lg text-xs font-semibold">
                     <button
+                      onClick={() => setAiModelView('trinity')}
+                      className={`px-3 py-1.5 rounded-md transition-colors ${aiModelView === 'trinity' ? 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 text-amber-300' : 'text-fintech-muted hover:text-white'}`}
+                    >
+                      ✨ Trinity
+                    </button>
+                    <button
                       onClick={() => setAiModelView('confluence')}
                       className={`px-3 py-1.5 rounded-md transition-colors ${aiModelView === 'confluence' ? 'bg-gradient-to-r from-emerald-500/20 to-indigo-500/20 border border-emerald-500/30 text-emerald-300' : 'text-fintech-muted hover:text-white'}`}
                     >
@@ -1713,7 +1719,28 @@ export default function Dashboard() {
                    if (!aiA) return 1;
                    if (!aiB) return -1;
 
-                   if (aiModelView === 'confluence') {
+                   if (aiModelView === 'trinity') {
+                     const isTrinityA = aiA.garpScore >= 75 && aiA.moatScore >= 75 && aiA.valueScore >= 75;
+                     const isTrinityB = aiB.garpScore >= 75 && aiB.moatScore >= 75 && aiB.valueScore >= 75;
+                     
+                     if (isTrinityA && !isTrinityB) return -1;
+                     if (isTrinityB && !isTrinityA) return 1;
+                     
+                     if (a.isStarred && !b.isStarred) return -1;
+                     if (b.isStarred && !a.isStarred) return 1;
+                     
+                     const avgA = (aiA.garpScore + aiA.moatScore + aiA.valueScore) / 3;
+                     const avgB = (aiB.garpScore + aiB.moatScore + aiB.valueScore) / 3;
+                     
+                     if (avgB !== avgA) return avgB - avgA;
+                     return (aiB.upsidePct || 0) - (aiA.upsidePct || 0);
+                   } else if (aiModelView === 'confluence') {
+                     const isTrinityA = aiA.garpScore >= 75 && aiA.moatScore >= 75 && aiA.valueScore >= 75;
+                     const isTrinityB = aiB.garpScore >= 75 && aiB.moatScore >= 75 && aiB.valueScore >= 75;
+                     
+                     if (isTrinityA && !isTrinityB) return -1;
+                     if (isTrinityB && !isTrinityA) return 1;
+
                      const isConfluenceA = [aiA.garpScore, aiA.moatScore, aiA.valueScore].filter((s: number) => s >= 75).length >= 2;
                      const isConfluenceB = [aiB.garpScore, aiB.moatScore, aiB.valueScore].filter((s: number) => s >= 75).length >= 2;
                      
@@ -1794,7 +1821,20 @@ export default function Dashboard() {
                     const isTrinity = aiData.garpScore >= 75 && aiData.moatScore >= 75 && aiData.valueScore >= 75;
                     const isConfluence = !isTrinity && [aiData.garpScore, aiData.moatScore, aiData.valueScore].filter((s: number) => s >= 75).length >= 2;
                     
-                    if (aiModelView === 'confluence') {
+                    if (aiModelView === 'trinity') {
+                      if (isTrinity) {
+                        cardBorderClass = 'border-amber-400/70 shadow-[0_0_25px_rgba(251,191,36,0.3)]';
+                        showTrinityBadge = true;
+                      } else {
+                        const isTopAvg = aiResults[0]?.symbol === w.symbol;
+                        if (isTopAvg) {
+                          cardBorderClass = 'border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.2)]';
+                          showTopPickBadge = true;
+                        } else if (w.isStarred) {
+                          cardBorderClass = 'border-amber-400/50 shadow-[0_0_15px_rgba(251,191,36,0.1)]';
+                        }
+                      }
+                    } else if (aiModelView === 'confluence') {
                       if (isTrinity) {
                         cardBorderClass = 'border-amber-400/70 shadow-[0_0_25px_rgba(251,191,36,0.3)]';
                         showTrinityBadge = true;
@@ -1947,7 +1987,7 @@ export default function Dashboard() {
                       <div className="mt-4 pt-4 border-t border-fintech-border/50">
                         <div className="flex justify-between items-center mb-2">
                           <span className="text-xs font-semibold text-indigo-300 flex items-center gap-1">
-                            {aiModelView === 'confluence' ? (
+                            {aiModelView === 'confluence' || aiModelView === 'trinity' ? (
                               <span className="flex items-center gap-1"><Sparkles size={10} /> AI Score:</span>
                             ) : aiModelView === 'garp' ? (
                               <span className="flex items-center gap-1"><TrendingUp size={10} /> GARP Score:</span>
@@ -1958,13 +1998,13 @@ export default function Dashboard() {
                             )}
                           </span>
                           <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                            (aiModelView === 'confluence' ? (aiData.garpScore + aiData.moatScore + aiData.valueScore)/3 : aiModelView === 'garp' ? aiData.garpScore : aiModelView === 'moat' ? aiData.moatScore : aiData.valueScore) > 70 
+                            ((aiModelView === 'confluence' || aiModelView === 'trinity') ? (aiData.garpScore + aiData.moatScore + aiData.valueScore)/3 : aiModelView === 'garp' ? aiData.garpScore : aiModelView === 'moat' ? aiData.moatScore : aiData.valueScore) > 70 
                               ? 'bg-emerald-500/20 text-emerald-400' 
-                              : (aiModelView === 'confluence' ? (aiData.garpScore + aiData.moatScore + aiData.valueScore)/3 : aiModelView === 'garp' ? aiData.garpScore : aiModelView === 'moat' ? aiData.moatScore : aiData.valueScore) > 50 
+                              : ((aiModelView === 'confluence' || aiModelView === 'trinity') ? (aiData.garpScore + aiData.moatScore + aiData.valueScore)/3 : aiModelView === 'garp' ? aiData.garpScore : aiModelView === 'moat' ? aiData.moatScore : aiData.valueScore) > 50 
                                 ? 'bg-amber-500/20 text-amber-400' 
                                 : 'bg-rose-500/20 text-rose-400'
                           }`}>
-                            {aiModelView === 'confluence' 
+                            {(aiModelView === 'confluence' || aiModelView === 'trinity') 
                               ? `${Math.round((aiData.garpScore + aiData.moatScore + aiData.valueScore) / 3)}/100` 
                               : aiModelView === 'garp' 
                                 ? `${aiData.garpScore}/100` 
@@ -1974,8 +2014,8 @@ export default function Dashboard() {
                           </span>
                         </div>
 
-                        {/* Combined dashboard metrics inside card if Confluence is active */}
-                        {aiModelView === 'confluence' && (
+                        {/* Combined dashboard metrics inside card if Confluence or Trinity is active */}
+                        {(aiModelView === 'confluence' || aiModelView === 'trinity') && (
                           <div className="flex gap-2 mb-3 bg-slate-900/60 p-1.5 rounded-lg border border-fintech-border/30 text-[10px] text-center font-medium">
                             <div className="flex-1">
                               <div className="text-indigo-400 font-semibold mb-0.5">GARP</div>
