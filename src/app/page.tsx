@@ -64,6 +64,12 @@ export default function Dashboard() {
   const [watchlist, setWatchlist] = useState<any[]>([]);
   const [showWatchlistModal, setShowWatchlistModal] = useState(false);
   const [watchlistInput, setWatchlistInput] = useState('');
+  
+  // Trinity Screener state
+  const [screenerTabActive, setScreenerTabActive] = useState(false);
+  const [screenerResults, setScreenerResults] = useState<any[]>([]);
+  const [screenerLoading, setScreenerLoading] = useState(false);
+  const [screenerError, setScreenerError] = useState<string | null>(null);
   const [explanationSymbol, setExplanationSymbol] = useState<string | null>(null);
   
   // AI State
@@ -454,6 +460,27 @@ export default function Dashboard() {
       await fetchWatchlist();
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const runTrinityScreener = async () => {
+    setScreenerLoading(true);
+    setScreenerError(null);
+    setScreenerResults([]);
+    try {
+      const res = await fetch('/api/trinity-screener', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        setScreenerResults(data.results || []);
+      } else {
+        const err = await res.json();
+        setScreenerError(err.error || 'Failed to run screener');
+      }
+    } catch (err) {
+      console.error(err);
+      setScreenerError('Network error while running screener');
+    } finally {
+      setScreenerLoading(false);
     }
   };
 
@@ -2348,8 +2375,26 @@ export default function Dashboard() {
       {showWatchlistModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-fintech-card border border-fintech-border w-full max-w-md rounded-2xl p-6 shadow-2xl transform transition-all">
-            <h2 className="text-2xl font-bold text-white mb-6">Add to Watchlist</h2>
-            <form onSubmit={handleAddToWatchlist} className="space-y-4">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-white">Add to Watchlist</h2>
+              <div className="flex bg-fintech-bg border border-fintech-border rounded-lg p-1">
+                <button 
+                  onClick={() => setScreenerTabActive(false)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${!screenerTabActive ? 'bg-fintech-card text-white shadow-sm' : 'text-fintech-muted hover:text-white'}`}
+                >
+                  Search
+                </button>
+                <button 
+                  onClick={() => setScreenerTabActive(true)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-1 ${screenerTabActive ? 'bg-fintech-card text-white shadow-sm' : 'text-fintech-muted hover:text-white'}`}
+                >
+                  <Sparkles size={12} /> Screener
+                </button>
+              </div>
+            </div>
+
+            {!screenerTabActive ? (
+              <form onSubmit={handleAddToWatchlist} className="space-y-4">
               <div className="relative symbol-search-container">
                 <label className="block text-sm font-medium text-fintech-muted mb-1">Symbol (e.g. AAPL)</label>
                 <div className="relative">
@@ -2419,6 +2464,70 @@ export default function Dashboard() {
                 </button>
               </div>
             </form>
+            ) : (
+              <div className="space-y-4">
+                <div className="text-sm text-fintech-muted mb-4">
+                  Scan a curated pool of top US stocks to find hidden Trinity or Confluence AI opportunities right now.
+                </div>
+                
+                {screenerError && <div className="text-xs text-rose-400 bg-rose-500/10 p-3 rounded-xl border border-rose-500/20">{screenerError}</div>}
+                
+                {screenerResults.length > 0 ? (
+                  <div className="max-h-60 overflow-y-auto custom-scrollbar space-y-2 pr-2">
+                    {screenerResults.map((r, i) => (
+                      <button 
+                        key={i}
+                        type="button"
+                        onClick={() => {
+                          setWatchlistInput(r.symbol);
+                          setScreenerTabActive(false);
+                        }}
+                        className="w-full text-left p-3 bg-fintech-bg border border-fintech-border hover:border-fintech-accent/50 rounded-xl transition-all flex justify-between items-center group"
+                      >
+                        <div>
+                          <div className="font-bold text-white group-hover:text-fintech-accent transition-colors">{r.symbol}</div>
+                          <div className="text-xs text-fintech-muted truncate max-w-[150px]">{r.name}</div>
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm ${r.isTrinity ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-white' : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white'}`}>
+                            {r.isTrinity ? 'TRINITY' : 'CONFLUENCE'}
+                          </span>
+                          <div className="flex gap-1 text-[9px] text-fintech-muted font-medium">
+                            <span className="text-indigo-300">G:{r.garpScore}</span>
+                            <span className="text-purple-300">M:{r.moatScore}</span>
+                            <span className="text-amber-300">V:{r.valueScore}</span>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center p-8 bg-fintech-bg/50 rounded-xl border border-dashed border-fintech-border">
+                    <Sparkles size={32} className="text-fintech-accent/30 mb-3" />
+                    <p className="text-sm text-fintech-muted text-center">Ready to discover high-quality AI rated stocks?</p>
+                  </div>
+                )}
+
+                <div className="flex gap-3 mt-8">
+                  <button
+                    type="button"
+                    onClick={() => setShowWatchlistModal(false)}
+                    className="flex-1 py-3 px-4 rounded-xl font-medium text-fintech-text bg-fintech-bg border border-fintech-border hover:bg-fintech-border transition-colors"
+                  >
+                    Close
+                  </button>
+                  <button
+                    type="button"
+                    onClick={runTrinityScreener}
+                    disabled={screenerLoading}
+                    className="flex-1 py-3 px-4 rounded-xl font-medium text-white bg-fintech-accent hover:bg-blue-600 transition-colors shadow-[0_0_15px_rgba(59,130,246,0.4)] disabled:opacity-50 flex justify-center items-center gap-2"
+                  >
+                    {screenerLoading ? <RefreshCw size={18} className="animate-spin" /> : <Search size={18} />}
+                    {screenerLoading ? 'Scanning...' : (screenerResults.length > 0 ? 'Rescan Market' : 'Scan Market')}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
