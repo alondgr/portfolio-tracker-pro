@@ -1783,86 +1783,92 @@ export default function Dashboard() {
                  }
                  return (b.isStarred ? 1 : 0) - (a.isStarred ? 1 : 0);
               }).map((w, i) => {
-                 const aiData = aiResults.find(r => r.symbol === w.symbol);
-                 
-                 let cardBorderClass = 'border-fintech-border';
-                 let showTopPickBadge = false;
-                 let showConfluenceBadge = false;
-                 
-                 if (aiResults.length > 0 && aiData) {
-                   const isTrinity = aiData.garpScore >= 75 && aiData.moatScore >= 75 && aiData.valueScore >= 75;
-                   const isConfluence = !isTrinity && [aiData.garpScore, aiData.moatScore, aiData.valueScore].filter((s: number) => s >= 75).length >= 2;
-                   
-                   if (aiModelView === 'confluence') {
-                     if (isTrinity) {
-                       cardBorderClass = 'border-amber-400/70 shadow-[0_0_25px_rgba(251,191,36,0.3)]';
-                       showConfluenceBadge = true;
-                     } else if (isConfluence) {
-                       cardBorderClass = 'border-emerald-400/70 shadow-[0_0_25px_rgba(16,185,129,0.25)]';
-                       showConfluenceBadge = true;
-                     } else {
-                       const isTopAvg = aiResults[0]?.symbol === w.symbol;
-                       if (isTopAvg) {
-                         cardBorderClass = 'border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.2)]';
-                         showTopPickBadge = true;
-                       } else if (w.isStarred) {
-                         cardBorderClass = 'border-amber-400/50 shadow-[0_0_15px_rgba(251,191,36,0.1)]';
-                       }
-                     }
-                   } else if (aiModelView === 'garp') {
-                     const sortedGarp = [...aiResults].sort((x, y) => {
-                       if (y.garpScore !== x.garpScore) return y.garpScore - x.garpScore;
-                       return (y.upsidePct || 0) - (x.upsidePct || 0);
-                     });
-                     if (sortedGarp[0]?.symbol === w.symbol) {
-                       cardBorderClass = 'border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.2)]';
-                       showTopPickBadge = true;
-                     } else if (w.isStarred) {
-                       cardBorderClass = 'border-amber-400/50 shadow-[0_0_15px_rgba(251,191,36,0.1)]';
-                     }
-                   } else if (aiModelView === 'moat') {
-                     const sortedMoat = [...aiResults].sort((x, y) => {
-                       if (y.moatScore !== x.moatScore) return y.moatScore - x.moatScore;
-                       return (y.upsidePct || 0) - (x.upsidePct || 0);
-                     });
-                     if (sortedMoat[0]?.symbol === w.symbol) {
-                       cardBorderClass = 'border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.2)]';
-                       showTopPickBadge = true;
-                     } else if (w.isStarred) {
-                       cardBorderClass = 'border-amber-400/50 shadow-[0_0_15px_rgba(251,191,36,0.1)]';
-                     }
-                   } else if (aiModelView === 'value') {
-                     const sortedValue = [...aiResults].sort((x, y) => {
-                       if (y.valueScore !== x.valueScore) return y.valueScore - x.valueScore;
-                       return (y.upsidePct || 0) - (x.upsidePct || 0);
-                     });
-                     if (sortedValue[0]?.symbol === w.symbol) {
-                       cardBorderClass = 'border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.2)]';
-                       showTopPickBadge = true;
-                     } else if (w.isStarred) {
-                       cardBorderClass = 'border-amber-400/50 shadow-[0_0_15px_rgba(251,191,36,0.1)]';
-                     }
-                   }
-                 } else if (w.isStarred) {
-                   cardBorderClass = 'border-amber-400/50 shadow-[0_0_15px_rgba(251,191,36,0.1)]';
-                 }
+                  const aiData = aiResults.find(r => r.symbol === w.symbol);
+                  
+                  let cardBorderClass = 'border-fintech-border';
+                  let showTopPickBadge = false;
+                  let showConfluenceBadge = false;
+                  let showTrinityBadge = false;
+                  
+                  if (aiResults.length > 0 && aiData) {
+                    const isTrinity = aiData.garpScore >= 75 && aiData.moatScore >= 75 && aiData.valueScore >= 75;
+                    const isConfluence = !isTrinity && [aiData.garpScore, aiData.moatScore, aiData.valueScore].filter((s: number) => s >= 75).length >= 2;
+                    
+                    if (aiModelView === 'confluence') {
+                      if (isTrinity) {
+                        cardBorderClass = 'border-amber-400/70 shadow-[0_0_25px_rgba(251,191,36,0.3)]';
+                        showTrinityBadge = true;
+                      } else if (isConfluence) {
+                        cardBorderClass = 'border-emerald-400/70 shadow-[0_0_25px_rgba(16,185,129,0.25)]';
+                        showConfluenceBadge = true;
+                      } else {
+                        const isTopAvg = aiResults[0]?.symbol === w.symbol;
+                        if (isTopAvg) {
+                          cardBorderClass = 'border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.2)]';
+                          showTopPickBadge = true;
+                        } else if (w.isStarred) {
+                          cardBorderClass = 'border-amber-400/50 shadow-[0_0_15px_rgba(251,191,36,0.1)]';
+                        }
+                      }
+                    } else if (aiModelView === 'garp') {
+                      const sortedGarp = [...aiResults].sort((x, y) => {
+                        if (y.garpScore !== x.garpScore) return y.garpScore - x.garpScore;
+                        return (y.upsidePct || 0) - (x.upsidePct || 0);
+                      });
+                      if (sortedGarp[0]?.symbol === w.symbol) {
+                        cardBorderClass = 'border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.2)]';
+                        showTopPickBadge = true;
+                      } else if (w.isStarred) {
+                        cardBorderClass = 'border-amber-400/50 shadow-[0_0_15px_rgba(251,191,36,0.1)]';
+                      }
+                    } else if (aiModelView === 'moat') {
+                      const sortedMoat = [...aiResults].sort((x, y) => {
+                        if (y.moatScore !== x.moatScore) return y.moatScore - x.moatScore;
+                        return (y.upsidePct || 0) - (x.upsidePct || 0);
+                      });
+                      if (sortedMoat[0]?.symbol === w.symbol) {
+                        cardBorderClass = 'border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.2)]';
+                        showTopPickBadge = true;
+                      } else if (w.isStarred) {
+                        cardBorderClass = 'border-amber-400/50 shadow-[0_0_15px_rgba(251,191,36,0.1)]';
+                      }
+                    } else if (aiModelView === 'value') {
+                      const sortedValue = [...aiResults].sort((x, y) => {
+                        if (y.valueScore !== x.valueScore) return y.valueScore - x.valueScore;
+                        return (y.upsidePct || 0) - (x.upsidePct || 0);
+                      });
+                      if (sortedValue[0]?.symbol === w.symbol) {
+                        cardBorderClass = 'border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.2)]';
+                        showTopPickBadge = true;
+                      } else if (w.isStarred) {
+                        cardBorderClass = 'border-amber-400/50 shadow-[0_0_15px_rgba(251,191,36,0.1)]';
+                      }
+                    }
+                  } else if (w.isStarred) {
+                    cardBorderClass = 'border-amber-400/50 shadow-[0_0_15px_rgba(251,191,36,0.1)]';
+                  }
 
-                 return (
-                 <div key={i} className={`bg-fintech-card border ${cardBorderClass} rounded-xl p-5 shadow-lg hover:border-fintech-accent/50 transition-colors relative group`}>
-                   {showConfluenceBadge && (
-                      <div className="absolute -top-3 -right-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg flex items-center gap-1 border border-white/20 z-10 animate-pulse">
-                        <Sparkles size={10} /> DUAL CONFLUENCE
-                      </div>
-                   )}
-                   {showTopPickBadge && !showConfluenceBadge && (
-                      <div className="absolute -top-3 -right-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg flex items-center gap-1 border border-white/20 z-10">
-                        <Sparkles size={10} /> AI TOP PICK
-                      </div>
-                   )}
-                   <div className="flex justify-between items-start mb-2">
-                     <div 
-                       className="cursor-pointer group/w-symbol"
-                       onClick={() => setExplanationSymbol(w.symbol)}
+                  return (
+                  <div key={i} className={`bg-fintech-card border ${cardBorderClass} rounded-xl p-5 shadow-lg hover:border-fintech-accent/50 transition-colors relative group`}>
+                    {showTrinityBadge && (
+                       <div className="absolute -top-3 -right-3 bg-gradient-to-r from-amber-400 to-orange-500 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg flex items-center gap-1 border border-white/20 z-10 animate-pulse">
+                         <Sparkles size={10} /> TRINITY
+                       </div>
+                    )}
+                    {showConfluenceBadge && (
+                       <div className="absolute -top-3 -right-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg flex items-center gap-1 border border-white/20 z-10 animate-pulse">
+                         <Sparkles size={10} /> DUAL CONFLUENCE
+                       </div>
+                    )}
+                    {showTopPickBadge && !showConfluenceBadge && !showTrinityBadge && (
+                       <div className="absolute -top-3 -right-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg flex items-center gap-1 border border-white/20 z-10">
+                         <Sparkles size={10} /> AI TOP PICK
+                       </div>
+                    )}
+                    <div className="flex justify-between items-start mb-2">
+                      <div 
+                        className="cursor-pointer group/w-symbol"
+                        onClick={() => setExplanationSymbol(w.symbol)}
                      >
                        <div className="font-bold text-lg text-white tracking-wide flex items-center gap-1.5 group-hover/w-symbol:text-fintech-accent transition-colors">
                          <span>{w.symbol}</span>
