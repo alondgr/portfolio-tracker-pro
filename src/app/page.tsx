@@ -2617,12 +2617,14 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="relative border-t border-slate-800/80 pt-4 mt-2 mb-6">
-              <p className={`text-slate-300 text-sm leading-relaxed font-medium transition-all duration-300 ${isExplanationExpanded ? '' : 'line-clamp-3'}`}>
-                {holdings.find(h => h.symbol === explanationSymbol)?.explanation || 
-                 watchlist.find(w => w.symbol === explanationSymbol)?.explanation ||
-                 COMPANY_EXPLANATIONS[explanationSymbol.toUpperCase()] || 
-                 "No company explanation is currently configured for this ticker."}
-              </p>
+              <div className={`transition-all duration-300 ${isExplanationExpanded ? 'max-h-60 overflow-y-auto pr-2' : ''}`}>
+                <p className={`text-slate-300 text-sm leading-relaxed font-medium ${isExplanationExpanded ? '' : 'line-clamp-3'}`}>
+                  {holdings.find(h => h.symbol === explanationSymbol)?.explanation || 
+                   watchlist.find(w => w.symbol === explanationSymbol)?.explanation ||
+                   COMPANY_EXPLANATIONS[explanationSymbol.toUpperCase()] || 
+                   "No company explanation is currently configured for this ticker."}
+                </p>
+              </div>
               <button 
                 onClick={() => setIsExplanationExpanded(!isExplanationExpanded)}
                 className="text-fintech-accent text-xs font-bold mt-2 hover:text-indigo-400 transition-colors flex items-center gap-1"
