@@ -71,6 +71,11 @@ export default function Dashboard() {
   const [screenerLoading, setScreenerLoading] = useState(false);
   const [screenerError, setScreenerError] = useState<string | null>(null);
   const [explanationSymbol, setExplanationSymbol] = useState<string | null>(null);
+  const [isExplanationExpanded, setIsExplanationExpanded] = useState(false);
+  
+  useEffect(() => {
+    setIsExplanationExpanded(false);
+  }, [explanationSymbol]);
   
   // AI State
   const [aiLoading, setAiLoading] = useState(false);
@@ -2611,12 +2616,20 @@ export default function Dashboard() {
                 </p>
               </div>
             </div>
-            <p className="text-slate-300 text-sm leading-relaxed border-t border-slate-800/80 pt-4 mt-2 mb-6 font-medium">
-              {holdings.find(h => h.symbol === explanationSymbol)?.explanation || 
-               watchlist.find(w => w.symbol === explanationSymbol)?.explanation ||
-               COMPANY_EXPLANATIONS[explanationSymbol.toUpperCase()] || 
-               "No company explanation is currently configured for this ticker."}
-            </p>
+            <div className="relative border-t border-slate-800/80 pt-4 mt-2 mb-6">
+              <p className={`text-slate-300 text-sm leading-relaxed font-medium transition-all duration-300 ${isExplanationExpanded ? '' : 'line-clamp-3'}`}>
+                {holdings.find(h => h.symbol === explanationSymbol)?.explanation || 
+                 watchlist.find(w => w.symbol === explanationSymbol)?.explanation ||
+                 COMPANY_EXPLANATIONS[explanationSymbol.toUpperCase()] || 
+                 "No company explanation is currently configured for this ticker."}
+              </p>
+              <button 
+                onClick={() => setIsExplanationExpanded(!isExplanationExpanded)}
+                className="text-fintech-accent text-xs font-bold mt-2 hover:text-indigo-400 transition-colors flex items-center gap-1"
+              >
+                {isExplanationExpanded ? "Show Less" : "Read More"}
+              </button>
+            </div>
             <button
               onClick={() => setExplanationSymbol(null)}
               className="w-full bg-slate-800 hover:bg-slate-700 hover:text-white text-slate-300 font-bold py-3 px-4 rounded-xl transition-all text-sm shadow-lg border border-slate-700/50"
