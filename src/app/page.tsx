@@ -1726,13 +1726,14 @@ export default function Dashboard() {
                      if (isTrinityA && !isTrinityB) return -1;
                      if (isTrinityB && !isTrinityA) return 1;
                      
-                     if (a.isStarred && !b.isStarred) return -1;
-                     if (b.isStarred && !a.isStarred) return 1;
-                     
                      const avgA = (aiA.garpScore + aiA.moatScore + aiA.valueScore) / 3;
                      const avgB = (aiB.garpScore + aiB.moatScore + aiB.valueScore) / 3;
                      
                      if (avgB !== avgA) return avgB - avgA;
+                     
+                     if (a.isStarred && !b.isStarred) return -1;
+                     if (b.isStarred && !a.isStarred) return 1;
+                     
                      return (aiB.upsidePct || 0) - (aiA.upsidePct || 0);
                    } else if (aiModelView === 'confluence') {
                      const isTrinityA = aiA.garpScore >= 75 && aiA.moatScore >= 75 && aiA.valueScore >= 75;
@@ -1747,13 +1748,14 @@ export default function Dashboard() {
                      if (isConfluenceA && !isConfluenceB) return -1;
                      if (isConfluenceB && !isConfluenceA) return 1;
                      
-                     if (a.isStarred && !b.isStarred) return -1;
-                     if (b.isStarred && !a.isStarred) return 1;
-                     
                      const avgA = (aiA.garpScore + aiA.moatScore + aiA.valueScore) / 3;
                      const avgB = (aiB.garpScore + aiB.moatScore + aiB.valueScore) / 3;
                      
                      if (avgB !== avgA) return avgB - avgA;
+                     
+                     if (a.isStarred && !b.isStarred) return -1;
+                     if (b.isStarred && !a.isStarred) return 1;
+                     
                      return (aiB.upsidePct || 0) - (aiA.upsidePct || 0);
                    } else if (aiModelView === 'garp') {
                      const sortedGarp = [...aiResults].sort((x, y) => {
@@ -1767,10 +1769,11 @@ export default function Dashboard() {
                      if (isTopGarpA && !isTopGarpB) return -1;
                      if (isTopGarpB && !isTopGarpA) return 1;
                      
+                     if (aiB.garpScore !== aiA.garpScore) return aiB.garpScore - aiA.garpScore;
+                     
                      if (a.isStarred && !b.isStarred) return -1;
                      if (b.isStarred && !a.isStarred) return 1;
                      
-                     if (aiB.garpScore !== aiA.garpScore) return aiB.garpScore - aiA.garpScore;
                      return (aiB.upsidePct || 0) - (aiA.upsidePct || 0);
                    } else if (aiModelView === 'moat') {
                      const sortedMoat = [...aiResults].sort((x, y) => {
@@ -1784,10 +1787,11 @@ export default function Dashboard() {
                      if (isTopMoatA && !isTopMoatB) return -1;
                      if (isTopMoatB && !isTopMoatA) return 1;
                      
+                     if (aiB.moatScore !== aiA.moatScore) return aiB.moatScore - aiA.moatScore;
+                     
                      if (a.isStarred && !b.isStarred) return -1;
                      if (b.isStarred && !a.isStarred) return 1;
                      
-                     if (aiB.moatScore !== aiA.moatScore) return aiB.moatScore - aiA.moatScore;
                      return (aiB.upsidePct || 0) - (aiA.upsidePct || 0);
                    } else if (aiModelView === 'value') {
                      const sortedValue = [...aiResults].sort((x, y) => {
@@ -1801,10 +1805,11 @@ export default function Dashboard() {
                      if (isTopValueA && !isTopValueB) return -1;
                      if (isTopValueB && !isTopValueA) return 1;
                      
+                     if (aiB.valueScore !== aiA.valueScore) return aiB.valueScore - aiA.valueScore;
+                     
                      if (a.isStarred && !b.isStarred) return -1;
                      if (b.isStarred && !a.isStarred) return 1;
                      
-                     if (aiB.valueScore !== aiA.valueScore) return aiB.valueScore - aiA.valueScore;
                      return (aiB.upsidePct || 0) - (aiA.upsidePct || 0);
                    }
                  }
