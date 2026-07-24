@@ -11,6 +11,7 @@ import {
   Tooltip,
   ResponsiveContainer
 } from 'recharts';
+import { Info } from 'lucide-react';
 
 export default function PerformanceChart({ data, hideValues, currencySymbol = '$' }: { data: any[], hideValues: boolean, currencySymbol?: string }) {
   if (!data || data.length === 0) return (
@@ -66,7 +67,22 @@ export default function PerformanceChart({ data, hideValues, currencySymbol = '$
     <div className="bg-fintech-card border border-fintech-border rounded-2xl p-6 shadow-xl mb-8">
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
         <div>
-          <h3 className="text-lg font-semibold text-fintech-text uppercase tracking-widest opacity-80">Portfolio Performance</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-fintech-text uppercase tracking-widest opacity-80">Portfolio Performance</h3>
+            <div className="group relative flex items-center">
+              <Info className="w-4 h-4 text-fintech-muted cursor-help hover:text-white transition-colors" />
+              
+              <div className="absolute left-6 top-0 md:left-0 md:top-full mt-1 md:mt-2 w-[280px] md:w-96 bg-fintech-bg border border-fintech-border rounded-xl p-4 shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none">
+                <h4 className="font-bold text-white mb-2 text-sm border-b border-fintech-border pb-2">Chart Metrics Guide</h4>
+                <div className="space-y-3 text-xs text-fintech-muted leading-relaxed">
+                  <p><strong className="text-blue-400 font-medium">Time-Weighted Return (TWR):</strong> Measures your compound rate of growth, stripping out the effects of cash deposits/withdrawals to show your true investment skill.</p>
+                  <p><strong className="text-emerald-400 font-medium">Cumulative Wealth:</strong> The absolute total monetary value of your portfolio over time, tracked on the right axis.</p>
+                  <p><strong className="text-slate-300 font-medium">S&P 500 Benchmark:</strong> A standard index tracking 500 large U.S. companies, used as a baseline to compare performance.</p>
+                  <p><strong className="text-white font-medium">Alpha (Outperformance):</strong> The difference between your TWR and the S&P 500. A positive Alpha means you're beating the market!</p>
+                </div>
+              </div>
+            </div>
+          </div>
           <div className="text-xs text-fintech-muted mt-1">Time-Weighted Return (TWR) vs Cumulative Wealth</div>
         </div>
         <div className="flex items-center gap-3 text-sm bg-fintech-bg/50 px-3 py-2 rounded-lg border border-fintech-border/50">
