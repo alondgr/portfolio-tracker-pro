@@ -33,3 +33,13 @@ model Watchlist {
   @@unique([userId, symbol])
   @@index([userId])
 }
+
+model SystemHealthLog {
+  id        String   @id @default(uuid())
+  level     String   // 'ERROR', 'WARN', 'INFO'
+  category  String   // 'API', 'DATABASE', 'RUNTIME', 'TYPE_MISMATCH'
+  message   String
+  metadata  Json?    
+  createdAt DateTime @default(now())
+  resolved  Boolean  @default(false)
+}
