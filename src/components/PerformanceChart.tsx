@@ -85,17 +85,32 @@ export default function PerformanceChart({ data, hideValues, currencySymbol = '$
           </div>
           <div className="text-xs text-fintech-muted mt-1">Time-Weighted Return (TWR) vs Cumulative Wealth</div>
         </div>
-        <div className="flex items-center gap-3 text-sm bg-fintech-bg/50 px-3 py-2 rounded-lg border border-fintech-border/50">
-          <div className="flex items-center gap-1.5" title="Portfolio Return">
+        <div 
+          className="group relative flex items-center gap-3 text-sm bg-fintech-bg/50 px-3 py-2 rounded-lg border border-fintech-border/50 cursor-pointer hover:bg-fintech-bg/80 transition-colors"
+          tabIndex={0}
+        >
+          <div className="flex items-center gap-1.5">
             <div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div>
             <span className="text-white font-medium">{portFinalReturn > 0 ? '+' : ''}{portFinalReturn.toFixed(2)}%</span>
           </div>
-          <div className="flex items-center gap-1.5 border-l border-fintech-border pl-3" title="S&P 500 Return">
+          <div className="flex items-center gap-1.5 border-l border-fintech-border pl-3">
             <div className="w-2.5 h-2.5 rounded-full bg-slate-400"></div>
             <span className="text-white font-medium">{sp500FinalReturn > 0 ? '+' : ''}{sp500FinalReturn.toFixed(2)}%</span>
           </div>
-          <div className={`flex items-center gap-1.5 border-l border-fintech-border pl-3 font-bold ${isOutperforming ? 'text-emerald-400' : 'text-rose-400'}`} title="Difference (Alpha)">
+          <div className={`flex items-center gap-1.5 border-l border-fintech-border pl-3 font-bold ${isOutperforming ? 'text-emerald-400' : 'text-rose-400'}`}>
             <span>{isOutperforming ? 'Alpha:' : 'Lagging:'} {delta > 0 ? '+' : ''}{delta.toFixed(2)}%</span>
+          </div>
+          
+          {/* Tooltip Popover */}
+          <div className="absolute right-0 top-full mt-2 w-72 bg-fintech-bg border border-fintech-border rounded-xl p-4 shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible focus:opacity-100 focus:visible group-focus:opacity-100 group-focus:visible transition-all z-50 pointer-events-none text-left">
+            <h4 className="font-bold text-white mb-2 text-sm border-b border-fintech-border pb-2">What does this mean?</h4>
+            <div className="space-y-3 text-xs text-fintech-muted leading-relaxed">
+              <p><strong className="text-blue-400">Blue Dot:</strong> Your portfolio's return (TWR).</p>
+              <p><strong className="text-slate-300">Gray Dot:</strong> S&P 500 Index return.</p>
+              <p><strong className={isOutperforming ? 'text-emerald-400' : 'text-rose-400'}>
+                {isOutperforming ? 'Alpha' : 'Lagging'}:
+              </strong> You are {isOutperforming ? 'beating' : 'lagging behind'} the S&P 500 index by {Math.abs(delta).toFixed(2)}%.</p>
+            </div>
           </div>
         </div>
       </div>
