@@ -69,10 +69,10 @@ export default function PerformanceChart({ data, hideValues, currencySymbol = '$
         <div>
           <div className="flex items-center gap-2">
             <h3 className="text-lg font-semibold text-fintech-text uppercase tracking-widest opacity-80">Portfolio Performance</h3>
-            <div className="group relative flex items-center">
+            <div className="group relative flex items-center outline-none" tabIndex={0}>
               <Info className="w-4 h-4 text-fintech-muted cursor-help hover:text-white transition-colors" />
               
-              <div className="absolute left-6 top-0 md:left-0 md:top-full mt-1 md:mt-2 w-[280px] md:w-96 bg-fintech-bg border border-fintech-border rounded-xl p-4 shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none">
+              <div className="fixed bottom-4 left-4 right-4 md:absolute md:bottom-auto md:left-0 md:right-auto md:top-full mt-0 md:mt-2 md:w-96 bg-fintech-bg border border-fintech-border rounded-xl p-4 shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible focus:opacity-100 focus:visible group-focus:opacity-100 group-focus:visible transition-all z-[100] pointer-events-none">
                 <h4 className="font-bold text-white mb-2 text-sm border-b border-fintech-border pb-2">Chart Metrics Guide</h4>
                 <div className="space-y-3 text-xs text-fintech-muted leading-relaxed">
                   <p><strong className="text-blue-400 font-medium">Time-Weighted Return (TWR):</strong> Measures your compound rate of growth, stripping out the effects of cash deposits/withdrawals to show your true investment skill.</p>
@@ -86,7 +86,7 @@ export default function PerformanceChart({ data, hideValues, currencySymbol = '$
           <div className="text-xs text-fintech-muted mt-1">Time-Weighted Return (TWR) vs Cumulative Wealth</div>
         </div>
         <div 
-          className="group relative flex items-center gap-3 text-sm bg-fintech-bg/50 px-3 py-2 rounded-lg border border-fintech-border/50 cursor-pointer hover:bg-fintech-bg/80 transition-colors"
+          className="group relative flex items-center gap-3 text-sm bg-fintech-bg/50 px-3 py-2 rounded-lg border border-fintech-border/50 cursor-pointer hover:bg-fintech-bg/80 transition-colors outline-none"
           tabIndex={0}
         >
           <div className="flex items-center gap-1.5">
@@ -102,7 +102,7 @@ export default function PerformanceChart({ data, hideValues, currencySymbol = '$
           </div>
           
           {/* Tooltip Popover */}
-          <div className="absolute right-0 top-full mt-2 w-72 bg-fintech-bg border border-fintech-border rounded-xl p-4 shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible focus:opacity-100 focus:visible group-focus:opacity-100 group-focus:visible transition-all z-50 pointer-events-none text-left">
+          <div className="fixed bottom-4 left-4 right-4 md:absolute md:bottom-auto md:left-auto md:right-0 md:top-full mt-0 md:mt-2 md:w-72 bg-fintech-bg border border-fintech-border rounded-xl p-4 shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible focus:opacity-100 focus:visible group-focus:opacity-100 group-focus:visible transition-all z-[100] pointer-events-none text-left">
             <h4 className="font-bold text-white mb-2 text-sm border-b border-fintech-border pb-2">What does this mean?</h4>
             <div className="space-y-3 text-xs text-fintech-muted leading-relaxed">
               <p><strong className="text-blue-400">Blue Dot:</strong> Your portfolio's return (TWR).</p>
