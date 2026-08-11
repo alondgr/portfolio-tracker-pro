@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs';
+import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
 import yf from 'yahoo-finance2';
 
@@ -43,7 +43,7 @@ async function getHoldings(userId: string) {
 export async function GET() {
   const yahooFinance = new (yf.YahooFinance || yf)();
   try {
-    const { userId } = auth();
+    const { userId } = await auth();
     if (!userId) return NextResponse.json({ holdings: [] });
 
     const rawHoldings = await getHoldings(userId);
@@ -163,7 +163,7 @@ export async function GET() {
 // POST: Add new holding, add transaction, or delete transaction
 export async function POST(request: Request) {
   try {
-    const { userId } = auth();
+    const { userId } = await auth();
     if (!userId) return new NextResponse('Unauthorized', { status: 401 });
 
     const body = await request.json();

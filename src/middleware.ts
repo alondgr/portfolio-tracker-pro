@@ -1,17 +1,20 @@
-import { authMiddleware } from '@clerk/nextjs';
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 
-export default authMiddleware({
-  // Allow the home page and essential market data APIs to be public for "Ghost" users
-  publicRoutes: [
-    '/', 
-    '/api/health', 
-    '/api/price', 
-    '/api/market-data', 
-    '/api/exchange-rates',
-    '/api/portfolio',
-    '/api/performance',
-    '/api/search'
-  ]
+const isPublicRoute = createRouteMatcher([
+  '/', 
+  '/api/health', 
+  '/api/price', 
+  '/api/market-data', 
+  '/api/exchange-rates',
+  '/api/portfolio',
+  '/api/performance',
+  '/api/search'
+]);
+
+export default clerkMiddleware(async (auth, request) => {
+  if (!isPublicRoute(request)) {
+    await auth.protect();
+  }
 });
 
 export const config = {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs';
+import { auth } from '@clerk/nextjs/server';
 import yf from 'yahoo-finance2';
 
 export const dynamic = 'force-dynamic';
