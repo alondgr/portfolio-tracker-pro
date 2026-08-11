@@ -6,6 +6,11 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  experimental: {
+    turbo: {
+      persistentCaching: true,
+    },
+  },
 }
 
 module.exports = nextConfig
