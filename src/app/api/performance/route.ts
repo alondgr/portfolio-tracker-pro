@@ -71,11 +71,12 @@ export async function GET(request: Request) {
         if (cleanSymbol === 'GOLD') cleanSymbol = 'GC=F';
         if (cleanSymbol === 'BTC') cleanSymbol = 'BTC-USD';
 
-        let result = await yahooFinance.historical(cleanSymbol, {
+        let resultChart = await yahooFinance.chart(cleanSymbol, {
           period1: minDate,
           period2: today,
           interval: '1d'
         });
+        let result = (resultChart.quotes || []).filter((q: any) => q.close !== null && q.close !== undefined);
 
         // Fallback for simulated future dates (Yahoo won't have 2026 data yet)
         if (!result || result.length === 0) {
@@ -84,11 +85,12 @@ export async function GET(request: Request) {
           const fbEnd = new Date(today);
           fbEnd.setFullYear(fbEnd.getFullYear() - 2);
 
-          const fallbackResult = await yahooFinance.historical(cleanSymbol, {
+          const fallbackResultChart = await yahooFinance.chart(cleanSymbol, {
             period1: fbStart,
             period2: fbEnd,
             interval: '1d'
           });
+          const fallbackResult = (fallbackResultChart.quotes || []).filter((q: any) => q.close !== null && q.close !== undefined);
 
           if (fallbackResult && fallbackResult.length > 0) {
             result = fallbackResult.map(p => {
