@@ -2835,7 +2835,7 @@ export default function Dashboard() {
                       <tbody>
                         {allDividends.map((div, idx) => (
                           <tr key={idx} className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors">
-                            <td className="py-3 text-sm">{new Date(div.date).toLocaleDateString()}</td>
+                            <td className="py-3 text-sm">{new Date(div.date).toLocaleDateString('en-GB')}</td>
                             <td className="py-3 font-medium text-white">{div.symbol}</td>
                             <td className="py-3 text-sm text-right">{div.shares}</td>
                             <td className="py-3 text-sm text-right text-fintech-muted">{formatCurrency(div.amountPerShare, false, div.currency)}</td>
