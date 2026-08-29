@@ -150,7 +150,7 @@ export async function GET(request: Request) {
             if (t.type === 'BUY') {
               shares += qty;
               costBasis += (qty * price);
-            } else {
+            } else if (t.type === 'SELL') {
               if (shares > 0) {
                 const avgCost = costBasis / shares;
                 shares -= qty;
@@ -158,6 +158,8 @@ export async function GET(request: Request) {
               } else {
                 shares -= qty;
               }
+            } else if (t.type === 'SET_AVG_PRICE') {
+              costBasis = shares * price;
             }
           }
         });

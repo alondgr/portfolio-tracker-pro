@@ -876,7 +876,8 @@ export default function Dashboard() {
           body: JSON.stringify({
             action: 'addTransaction',
             symbol,
-            ...txnForm
+            ...txnForm,
+            quantity: txnForm.type === 'SET_AVG_PRICE' ? '0' : txnForm.quantity
           }),
         });
         if (!res.ok) throw new Error('Failed to add transaction');
@@ -885,14 +886,16 @@ export default function Dashboard() {
         const localHoldings = JSON.parse(localStorage.getItem('ghost_holdings') || '[]');
         const holding = localHoldings.find((h: any) => h.symbol === symbol);
         if (holding) {
-          const qty = Number(txnForm.quantity);
+          const qty = txnForm.type === 'SET_AVG_PRICE' ? 0 : Number(txnForm.quantity);
           const price = Number(txnForm.price);
           
           if (txnForm.type === 'BUY') {
             holding.avgBuyPrice = ((holding.avgBuyPrice * holding.quantity) + (price * qty)) / (holding.quantity + qty);
             holding.quantity += qty;
-          } else {
+          } else if (txnForm.type === 'SELL') {
             holding.quantity -= qty;
+          } else if (txnForm.type === 'SET_AVG_PRICE') {
+            holding.avgBuyPrice = price;
           }
           
           holding.transactions.push({
@@ -1546,6 +1549,7 @@ export default function Dashboard() {
                                         >
                                           <option value="BUY">Buy</option>
                                           <option value="SELL">Sell</option>
+                                          <option value="SET_AVG_PRICE">Override Avg Price</option>
                                         </select>
                                       </div>
                                       <div className="flex-1 min-w-[120px]">
@@ -1558,15 +1562,17 @@ export default function Dashboard() {
                                           className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-fintech-accent text-slate-200 cursor-pointer"
                                         />
                                       </div>
-                                      <div className="flex-1 min-w-[120px]">
-                                        <label className="block text-xs font-medium text-fintech-muted mb-1">Shares</label>
-                                        <input
-                                          type="number" step="any" required
-                                          value={txnForm.quantity}
-                                          onChange={e => setTxnForm({ ...txnForm, quantity: e.target.value })}
-                                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-fintech-accent placeholder-slate-500" placeholder="e.g. 5.5"
-                                        />
-                                      </div>
+                                      {txnForm.type !== 'SET_AVG_PRICE' && (
+                                        <div className="flex-1 min-w-[120px]">
+                                          <label className="block text-xs font-medium text-fintech-muted mb-1">Shares</label>
+                                          <input
+                                            type="number" step="any" required
+                                            value={txnForm.quantity}
+                                            onChange={e => setTxnForm({ ...txnForm, quantity: e.target.value })}
+                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-fintech-accent placeholder-slate-500" placeholder="e.g. 5.5"
+                                          />
+                                        </div>
+                                      )}
                                       <div className="flex-1 min-w-[120px]">
                                         <label className="block text-xs font-medium text-fintech-muted mb-1">Price</label>
                                         <input
@@ -1618,13 +1624,18 @@ export default function Dashboard() {
                                                   >
                                                     <option value="BUY">BUY</option>
                                                     <option value="SELL">SELL</option>
+                                                    <option value="SET_AVG_PRICE">OVERRIDE AVG</option>
                                                   </select>
-                                                  <input
-                                                    type="number" step="any" required placeholder="Shares"
-                                                    value={editTxnForm.quantity}
-                                                    onChange={e => setEditTxnForm({ ...editTxnForm, quantity: e.target.value })}
-                                                    className="flex-1 min-w-[70px] bg-slate-900 border border-slate-600 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-fintech-accent outline-none text-right"
-                                                  />
+                                                  {editTxnForm.type !== 'SET_AVG_PRICE' ? (
+                                                    <input
+                                                      type="number" step="any" required placeholder="Shares"
+                                                      value={editTxnForm.quantity}
+                                                      onChange={e => setEditTxnForm({ ...editTxnForm, quantity: e.target.value })}
+                                                      className="flex-1 min-w-[70px] bg-slate-900 border border-slate-600 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-fintech-accent outline-none text-right"
+                                                    />
+                                                  ) : (
+                                                    <div className="flex-1 min-w-[70px]"></div>
+                                                  )}
                                                   <input
                                                     type="number" step="any" required placeholder="Price"
                                                     value={editTxnForm.price}
@@ -1645,14 +1656,14 @@ export default function Dashboard() {
                                           <tr key={t.id} className="hover:bg-slate-800/40">
                                             <td className="py-2 px-4 text-slate-300">{new Date(t.date).toLocaleDateString('en-GB')}</td>
                                             <td className="py-2 px-4 font-medium">
-                                              <span className={`px-2 py-0.5 rounded text-xs ${t.type === 'BUY' ? 'bg-fintech-profit/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
-                                                {t.type}
+                                              <span className={`px-2 py-0.5 rounded text-xs ${t.type === 'BUY' ? 'bg-fintech-profit/20 text-emerald-400' : t.type === 'SELL' ? 'bg-rose-500/20 text-rose-400' : 'bg-slate-500/20 text-slate-300'}`}>
+                                                {t.type === 'SET_AVG_PRICE' ? 'Override Avg' : t.type}
                                               </span>
                                             </td>
-                                            <td className="py-2 px-4 text-right text-slate-300">{hideValues ? '****' : t.quantity}</td>
+                                            <td className="py-2 px-4 text-right text-slate-300">{t.type === 'SET_AVG_PRICE' ? '-' : (hideValues ? '****' : t.quantity)}</td>
                                             <td className="py-2 px-4 text-right text-slate-400">{hideValues ? '****' : formatCurrency(convertValue(t.price, h.currency))}</td>
                                             <td className="py-2 px-4 text-right text-slate-300 border-l border-slate-700/50 font-medium">
-                                              {hideValues ? '****' : formatCurrency(convertValue(t.quantity * t.price, h.currency))}
+                                              {t.type === 'SET_AVG_PRICE' ? '-' : (hideValues ? '****' : formatCurrency(convertValue(t.quantity * t.price, h.currency)))}
                                             </td>
                                             <td className="py-2 px-4 text-center">
                                               <button
@@ -2317,14 +2328,14 @@ export default function Dashboard() {
                                               <tr key={t.id} className="hover:bg-slate-800/40">
                                                 <td className="py-2 px-4 text-slate-300">{new Date(t.date).toLocaleDateString('en-GB')}</td>
                                                 <td className="py-2 px-4 font-medium">
-                                                  <span className={`px-2 py-0.5 rounded text-xs ${t.type === 'BUY' ? 'bg-fintech-profit/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
-                                                    {t.type}
+                                                  <span className={`px-2 py-0.5 rounded text-xs ${t.type === 'BUY' ? 'bg-fintech-profit/20 text-emerald-400' : t.type === 'SELL' ? 'bg-rose-500/20 text-rose-400' : 'bg-slate-500/20 text-slate-300'}`}>
+                                                    {t.type === 'SET_AVG_PRICE' ? 'Override Avg' : t.type}
                                                   </span>
                                                 </td>
-                                                <td className="py-2 px-4 text-right text-slate-300">{t.quantity}</td>
+                                                <td className="py-2 px-4 text-right text-slate-300">{t.type === 'SET_AVG_PRICE' ? '-' : t.quantity}</td>
                                                 <td className="py-2 px-4 text-right text-slate-400">{hideValues ? '****' : formatCurrency(convertValue(t.price, h.currency))}</td>
-                                                <td className={`py-2 px-4 text-right border-l border-slate-700/50 font-medium ${t.type === 'BUY' ? 'text-fintech-loss' : 'text-fintech-profit'}`}>
-                                                  {hideValues ? '****' : `${t.type === 'BUY' ? '-' : '+'}${formatCurrency(convertValue(t.quantity * t.price, h.currency))}`}
+                                                <td className={`py-2 px-4 text-right border-l border-slate-700/50 font-medium ${t.type === 'SET_AVG_PRICE' ? 'text-slate-400' : (t.type === 'BUY' ? 'text-fintech-loss' : 'text-fintech-profit')}`}>
+                                                  {t.type === 'SET_AVG_PRICE' ? '-' : (hideValues ? '****' : `${t.type === 'BUY' ? '-' : '+'}${formatCurrency(convertValue(t.quantity * t.price, h.currency))}`)}
                                                 </td>
                                                 <td className="py-2 px-4 text-center">
                                                   <button

@@ -76,6 +76,8 @@ export async function GET() {
           
           totalQty -= qty;
           totalCostBasis = totalQty <= 0 ? 0 : totalCostBasis - costOfSoldShares;
+        } else if (t.type === 'SET_AVG_PRICE') {
+          totalCostBasis = totalQty * price;
         }
       });
 
