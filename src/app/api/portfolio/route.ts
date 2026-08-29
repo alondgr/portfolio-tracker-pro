@@ -136,6 +136,7 @@ export async function GET() {
       const dailyChangePct = q?.regularMarketChangePercent || 0;
       
       let totalDividendsReceived = 0;
+      let dividendHistory: any[] = [];
       if (holding.transactions && holding.transactions.length > 0) {
         try {
           const earliestDateStr = holding.transactions.reduce((min: string, t: any) => new Date(t.date) < new Date(min) ? t.date : min, holding.transactions[0].date);
@@ -155,7 +156,16 @@ export async function GET() {
                   } 
                });
                if (sharesOwned > 0) {
-                   totalDividendsReceived += (sharesOwned * divEvent.amount);
+                   const payout = sharesOwned * divEvent.amount;
+                   totalDividendsReceived += payout;
+                   dividendHistory.push({
+                       symbol: holding.symbol,
+                       date: divEvent.date,
+                       amountPerShare: divEvent.amount,
+                       shares: sharesOwned,
+                       totalPayout: payout,
+                       currency: q?.currency || 'USD'
+                   });
                }
             });
           }
@@ -175,6 +185,7 @@ export async function GET() {
         dailyChange,
         dailyChangePct,
         totalDividendsReceived,
+        dividendHistory,
         sector,
         industry,
         explanation,

@@ -199,6 +199,7 @@ export default function Dashboard() {
 
   // Main Modal state (for fresh additions only now)
   const [showModal, setShowModal] = useState(false);
+  const [showDividendModal, setShowDividendModal] = useState(false);
   const [formData, setFormData] = useState({ symbol: '', quantity: '1', avgBuyPrice: '', date: new Date().toISOString().split('T')[0] });
   const [submitLoading, setSubmitLoading] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -1397,10 +1398,10 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-fintech-card border border-fintech-border rounded-2xl p-6 shadow-xl relative overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <div onClick={() => setShowDividendModal(true)} className="bg-fintech-card border border-fintech-border rounded-2xl p-6 shadow-xl relative overflow-hidden group cursor-pointer hover:border-[#00FF88]/50 transition-all">
+          <div className="absolute inset-0 bg-gradient-to-br from-[#00FF88]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
           <p className="text-fintech-muted font-medium mb-1 relative z-10">Dividend Piggy Bank</p>
-          <h2 className="text-3xl font-bold text-amber-400 relative z-10">
+          <h2 className="text-3xl font-bold text-[#00FF88] relative z-10">
             {hideValues ? '****' : `+${formatCurrency(totalPortfolioDividends)}`}
           </h2>
         </div>
@@ -2789,6 +2790,73 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+      {showDividendModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="bg-fintech-card border border-fintech-border rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+            <div className="p-6 border-b border-fintech-border flex justify-between items-center">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <span className="text-[#00FF88]">Dividend History</span>
+              </h2>
+              <button onClick={() => setShowDividendModal(false)} className="text-fintech-muted hover:text-white transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto">
+              {(() => {
+                let allDividends: any[] = [];
+                holdings.forEach((h: any) => {
+                  if (h.dividendHistory) {
+                    allDividends = allDividends.concat(h.dividendHistory);
+                  }
+                });
+                allDividends.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                
+                if (allDividends.length === 0) {
+                  return (
+                    <div className="text-center py-10">
+                      <p className="text-fintech-muted">No dividend history found for your current holdings.</p>
+                    </div>
+                  );
+                }
+                
+                return (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-fintech-border text-xs text-fintech-muted uppercase">
+                          <th className="pb-3 font-semibold">Date</th>
+                          <th className="pb-3 font-semibold">Symbol</th>
+                          <th className="pb-3 font-semibold text-right">Shares</th>
+                          <th className="pb-3 font-semibold text-right">Per Share</th>
+                          <th className="pb-3 font-semibold text-right">Payout</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allDividends.map((div, idx) => (
+                          <tr key={idx} className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors">
+                            <td className="py-3 text-sm">{new Date(div.date).toLocaleDateString()}</td>
+                            <td className="py-3 font-medium text-white">{div.symbol}</td>
+                            <td className="py-3 text-sm text-right">{div.shares}</td>
+                            <td className="py-3 text-sm text-right text-fintech-muted">{formatCurrency(div.amountPerShare, false, div.currency)}</td>
+                            <td className="py-3 font-bold text-right text-[#00FF88]">{formatCurrency(div.totalPayout, false, div.currency)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+            </div>
+            
+            <div className="p-4 border-t border-fintech-border bg-slate-900/50 rounded-b-xl flex justify-between items-center">
+              <span className="text-sm text-fintech-muted">Total Dividends</span>
+              <span className="font-bold text-[#00FF88]">{hideValues ? '****' : formatCurrency(totalPortfolioDividends)}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
