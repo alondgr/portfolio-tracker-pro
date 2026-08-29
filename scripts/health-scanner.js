@@ -1,5 +1,6 @@
 const { execSync } = require('child_process');
-const yf = require('yahoo-finance2').default;
+const yfModule = require('yahoo-finance2').default || require('yahoo-finance2');
+const yf = new (yfModule.YahooFinance || yfModule)();
 const fs = require('fs');
 const { runCodeReview } = require('./code-review');
 
