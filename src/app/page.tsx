@@ -109,6 +109,7 @@ export default function Dashboard() {
     unrealizedPL: true,
     aiScore: true,
     yieldPct: false,
+    dividends: true,
     sector: false,
     industry: false,
     actions: true
@@ -119,7 +120,7 @@ export default function Dashboard() {
   const hasHiddenColumns = visibleCount < totalPossibleColumns;
 
   // Drag and drop column state
-  const defaultColumnOrder = ['symbol', 'quantity', 'avgBuyPrice', 'currentPrice', 'portfolioPct', 'marketValue', 'dailyChange', 'unrealizedPL', 'aiScore', 'yieldPct', 'sector', 'industry'];
+  const defaultColumnOrder = ['symbol', 'quantity', 'avgBuyPrice', 'currentPrice', 'portfolioPct', 'marketValue', 'dailyChange', 'unrealizedPL', 'aiScore', 'yieldPct', 'dividends', 'sector', 'industry'];
   const [columnOrder, setColumnOrder] = useState<string[]>(defaultColumnOrder);
   const [draggedCol, setDraggedCol] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
@@ -1029,6 +1030,7 @@ export default function Dashboard() {
   // Calculate totals (converting everything to selected currency)
   const totalMarketValue = filteredHoldings.reduce((sum, h) => sum + convertValue(h.marketValue || 0, h.currency), 0);
   const totalCostBasis = filteredHoldings.reduce((sum, h) => sum + convertValue(h.avgBuyPrice * h.quantity, h.currency), 0);
+  const totalPortfolioDividends = filteredHoldings.reduce((sum, h) => sum + convertValue(h.totalDividendsReceived || 0, h.currency), 0);
   // Realized P/L is extremely hard to calculate accurately without complex FIFO handling, so we rely on Unrealized against open cost basis.
   const totalUnrealizedPL = totalMarketValue - totalCostBasis;
   const totalYieldSum = filteredHoldings.reduce((sum, h) => sum + ((h.yieldPct || 0) * convertValue(h.marketValue || 0, h.currency)), 0);
@@ -1133,6 +1135,7 @@ export default function Dashboard() {
       case 'unrealizedPL': return <SortableHeader key={colId} label="Unrealized P/L" sortKey="unrealizedPL" alignRight style={getColumnStyle(visibleColumns.unrealizedPL, '140px')} {...dragProps} />;
       case 'aiScore': return <SortableHeader key={colId} label="AI Score" sortKey="aiScore" alignRight style={getColumnStyle(visibleColumns.aiScore, '110px')} {...dragProps} />;
       case 'yieldPct': return <SortableHeader key={colId} label="Div Yield" sortKey="yieldPct" alignRight style={getColumnStyle(visibleColumns.yieldPct, '100px')} {...dragProps} />;
+      case 'dividends': return <SortableHeader key={colId} label="Received Divs" sortKey="totalDividendsReceived" alignRight style={getColumnStyle(visibleColumns.dividends, '120px')} {...dragProps} />;
       case 'sector': return <SortableHeader key={colId} label="Sector" sortKey="sector" style={getColumnStyle(visibleColumns.sector, '150px')} {...dragProps} />;
       case 'industry': return <SortableHeader key={colId} label="Industry" sortKey="industry" style={getColumnStyle(visibleColumns.industry, '150px')} {...dragProps} />;
       default: return null;
@@ -1204,6 +1207,13 @@ export default function Dashboard() {
               {h.dividendDate && <span>Pay: {new Date(h.dividendDate).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}</span>}
             </div>
           )}
+        </td>
+      );
+      case 'dividends': return (
+        <td key="dividends" style={getColumnStyle(visibleColumns.dividends, '120px')} className="text-right">
+          <div className="text-fintech-profit font-medium">
+            {hideValues ? '****' : formatCurrency(convertValue(h.totalDividendsReceived || 0, h.currency))}
+          </div>
         </td>
       );
       case 'sector': return <td key="sector" style={getColumnStyle(visibleColumns.sector, '150px')} className="text-sm text-fintech-muted truncate max-w-[130px]" title={h.sector}>{h.sector || 'Unknown'}</td>;
@@ -1356,7 +1366,7 @@ export default function Dashboard() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-10">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-10">
         <div className="bg-fintech-card border border-fintech-border rounded-2xl p-6 shadow-xl relative overflow-hidden group">
           <div className="absolute inset-0 bg-gradient-to-br from-fintech-muted/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
           <p className="text-fintech-muted font-medium mb-1 relative z-10">Total Capital Invested</p>
@@ -1385,6 +1395,14 @@ export default function Dashboard() {
               {totalCostBasis > 0 ? ((totalUnrealizedPL / totalCostBasis) * 100).toFixed(2) : 0}%
             </div>
           </div>
+        </div>
+
+        <div className="bg-fintech-card border border-fintech-border rounded-2xl p-6 shadow-xl relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+          <p className="text-fintech-muted font-medium mb-1 relative z-10">Dividend Piggy Bank</p>
+          <h2 className="text-3xl font-bold text-amber-400 relative z-10">
+            {hideValues ? '****' : `+${formatCurrency(totalPortfolioDividends)}`}
+          </h2>
         </div>
 
         <div className="bg-fintech-card border border-fintech-border rounded-2xl p-6 shadow-xl relative overflow-hidden group">

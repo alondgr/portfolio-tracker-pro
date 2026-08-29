@@ -135,6 +135,35 @@ export async function GET() {
       const dailyChange = q?.regularMarketChange || 0;
       const dailyChangePct = q?.regularMarketChangePercent || 0;
       
+      let totalDividendsReceived = 0;
+      if (holding.transactions && holding.transactions.length > 0) {
+        try {
+          const earliestDateStr = holding.transactions.reduce((min: string, t: any) => new Date(t.date) < new Date(min) ? t.date : min, holding.transactions[0].date);
+          const chartData = await yahooFinance.chart(holding.symbol, { period1: earliestDateStr, events: 'div' });
+          if (chartData.events && chartData.events.dividends) {
+            chartData.events.dividends.forEach((divEvent: any) => {
+               let sharesOwned = 0;
+               holding.transactions.forEach((t: any) => {
+                  const tDate = new Date(t.date);
+                  // The user must own the stock *before* the ex-dividend date to receive the dividend.
+                  // We compare the start of the transaction day vs the start of the ex-dividend day.
+                  const tDay = new Date(tDate.getFullYear(), tDate.getMonth(), tDate.getDate());
+                  const divDay = new Date(divEvent.date.getFullYear(), divEvent.date.getMonth(), divEvent.date.getDate());
+                  if (tDay < divDay) {
+                      if (t.type === 'BUY') sharesOwned += t.quantity;
+                      else if (t.type === 'SELL') sharesOwned -= t.quantity;
+                  } 
+               });
+               if (sharesOwned > 0) {
+                   totalDividendsReceived += (sharesOwned * divEvent.amount);
+               }
+            });
+          }
+        } catch (e: any) {
+          console.log(`Failed fetching dividends for ${holding.symbol}:`, e.message);
+        }
+      }
+      
       return {
         ...holding,
         name,
@@ -145,6 +174,7 @@ export async function GET() {
         unrealizedPLPercent,
         dailyChange,
         dailyChangePct,
+        totalDividendsReceived,
         sector,
         industry,
         explanation,
