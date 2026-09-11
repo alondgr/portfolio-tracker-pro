@@ -110,7 +110,7 @@ export default function AllocationCharts({ holdings }: { holdings: any[] }) {
       return (
         <div className="bg-fintech-card p-3 border border-fintech-border rounded-lg shadow-lg text-sm">
           <p className="text-fintech-text font-semibold">{payload[0].name}</p>
-          <p className="text-fintech-muted">Value: ${payload[0].value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+          <p className="text-fintech-muted">Value: ${payload[0].value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
         </div>
       );
     }

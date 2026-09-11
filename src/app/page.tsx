@@ -771,7 +771,7 @@ export default function Dashboard() {
 
   const formatCurrency = (value: number, noDecimals: boolean = false) => {
     if (value === undefined || value === null) return '---';
-    return `${currencySymbols[selectedCurrency] || '$'}${value.toLocaleString(undefined, { minimumFractionDigits: noDecimals ? 0 : 2, maximumFractionDigits: noDecimals ? 0 : 2 })}`;
+    return `${currencySymbols[selectedCurrency] || '$'}${value.toLocaleString('en-US', { minimumFractionDigits: noDecimals ? 0 : 2, maximumFractionDigits: noDecimals ? 0 : 2 })}`;
   };
 
   const getHashColor = (str: string, offset = 0) => {
@@ -1042,12 +1042,12 @@ export default function Dashboard() {
 
   const isProfit = totalUnrealizedPL >= 0;
 
-  let latestMarketDateStr = new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  let latestMarketDateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   if (holdings.length > 0) {
     const validDates = holdings.map(h => h.marketDate ? new Date(h.marketDate).getTime() : 0).filter(t => t > 0);
     if (validDates.length > 0) {
       const maxTime = Math.max(...validDates);
-      latestMarketDateStr = new Date(maxTime).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      latestMarketDateStr = new Date(maxTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     }
   }
 
@@ -1204,8 +1204,8 @@ export default function Dashboard() {
           <div className="text-fintech-muted">{(h.yieldPct || 0).toFixed(2)}%</div>
           {(h.exDividendDate || h.dividendDate) && (
             <div className="text-[10px] text-fintech-muted flex flex-col mt-1 items-end opacity-80">
-              {h.exDividendDate && <span>Ex: {new Date(h.exDividendDate).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}</span>}
-              {h.dividendDate && <span>Pay: {new Date(h.dividendDate).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}</span>}
+              {h.exDividendDate && <span>Ex: {new Date(h.exDividendDate).toLocaleDateString('en-US', {month: 'short', day: 'numeric'})}</span>}
+              {h.dividendDate && <span>Pay: {new Date(h.dividendDate).toLocaleDateString('en-US', {month: 'short', day: 'numeric'})}</span>}
             </div>
           )}
         </td>
@@ -1418,7 +1418,7 @@ export default function Dashboard() {
           <div className={`absolute inset-0 bg-gradient-to-br from-${isDailyProfit ? 'fintech-profit' : 'fintech-loss'}/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity`}></div>
           <p className="text-fintech-muted font-medium mb-1 relative z-10 flex justify-between items-center">
             <span>Total Daily Change</span>
-            <span className="text-xs opacity-60 font-normal">{latestMarketDateStr}</span>
+            <span suppressHydrationWarning className="text-xs opacity-60 font-normal">{latestMarketDateStr}</span>
           </p>
           <div className="flex items-end gap-3 relative z-10">
             <h2 className={`text-3xl font-bold ${isDailyProfit ? 'text-fintech-profit' : 'text-fintech-loss'}`}>

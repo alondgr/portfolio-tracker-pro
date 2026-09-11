@@ -44,7 +44,7 @@ export default function PerformanceChart({ data, hideValues, currencySymbol = '$
               <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
               <p className="text-sm text-fintech-muted">Value:</p>
               <p className="text-base font-bold text-white">
-                 {hideValues ? '****' : `${currencySymbol}${dataPoint.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                 {hideValues ? '****' : `${currencySymbol}${dataPoint.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
               </p>
             </div>
             {dataPoint.sp500Return !== undefined && (
