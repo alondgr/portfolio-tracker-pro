@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
 import yf from 'yahoo-finance2';
+import { calculateDividends } from '@/lib/dividends';
 
 // Helper to reliably read holdings from database
 async function getHoldings(userId: string) {
@@ -142,32 +143,14 @@ export async function GET() {
           const earliestDateStr = holding.transactions.reduce((min: string, t: any) => new Date(t.date) < new Date(min) ? t.date : min, holding.transactions[0].date);
           const chartData = await yahooFinance.chart(holding.symbol, { period1: earliestDateStr, events: 'div' });
           if (chartData.events && chartData.events.dividends) {
-            chartData.events.dividends.forEach((divEvent: any) => {
-               let sharesOwned = 0;
-               holding.transactions.forEach((t: any) => {
-                  const tDate = new Date(t.date);
-                  // The user must own the stock *before* the ex-dividend date to receive the dividend.
-                  // We compare the start of the transaction day vs the start of the ex-dividend day.
-                  const tDay = new Date(tDate.getFullYear(), tDate.getMonth(), tDate.getDate());
-                  const divDay = new Date(divEvent.date.getFullYear(), divEvent.date.getMonth(), divEvent.date.getDate());
-                  if (tDay < divDay) {
-                      if (t.type === 'BUY') sharesOwned += t.quantity;
-                      else if (t.type === 'SELL') sharesOwned -= t.quantity;
-                  } 
-               });
-               if (sharesOwned > 0) {
-                   const payout = sharesOwned * divEvent.amount;
-                   totalDividendsReceived += payout;
-                   dividendHistory.push({
-                       symbol: holding.symbol,
-                       date: divEvent.date,
-                       amountPerShare: divEvent.amount,
-                       shares: sharesOwned,
-                       totalPayout: payout,
-                       currency: q?.currency || 'USD'
-                   });
-               }
-            });
+            const divResult = calculateDividends(
+              holding.transactions,
+              chartData.events.dividends as any[],
+              holding.symbol,
+              q?.currency || 'USD'
+            );
+            totalDividendsReceived = divResult.totalDividendsReceived;
+            dividendHistory = divResult.dividendHistory;
           }
         } catch (e: any) {
           console.log(`Failed fetching dividends for ${holding.symbol}:`, e.message);
