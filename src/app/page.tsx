@@ -7,11 +7,13 @@ import TickerTape from '@/components/TickerTape';
 import WisdomQuote from '@/components/WisdomQuote';
 import { 
   Building2, ChevronDown, ChevronUp, LogOut, Search, TrendingDown, TrendingUp, X, Check,
-  ArrowUpDown, RefreshCw, Plus, Star, AlertCircle, RefreshCcw, Trash2, Edit2, Eye, EyeOff, Coins, Info, Sparkles
+  ArrowUpDown, RefreshCw, Plus, Star, AlertCircle, RefreshCcw, Trash2, Edit2, Eye, EyeOff, Coins, Info, Sparkles,
+  Download, FileSpreadsheet, Copy, ExternalLink
 } from 'lucide-react';
 import { useUser, SignUpButton, UserButton } from '@clerk/nextjs';
 import { useConversionTimer } from '@/hooks/useConversionTimer';
 import { fetchWithUtcAuth } from '@/lib/marketFetch';
+import { exportPortfolioToCsv, exportPortfolioToExcel, copyPortfolioForGoogleSheets } from '@/lib/exportPortfolio';
 
 const CHART_COLORS = [
   '#3B82F6', '#10B981', '#6366F1', '#8B5CF6', '#EC4899', '#F43F5E', '#F59E0B', '#14B8A6', '#06B6D4',
@@ -96,8 +98,10 @@ export default function Dashboard() {
   const [selectedPortfolioSymbols, setSelectedPortfolioSymbols] = useState<string[]>([]);
   const [showPortfolioDropdown, setShowPortfolioDropdown] = useState(false);
 
-  // Column Visibility State
+  // Column Visibility & Export State
   const [showColumnDropdown, setShowColumnDropdown] = useState(false);
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const [exportToast, setExportToast] = useState<string | null>(null);
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
     index: true,
     symbol: true,
@@ -645,6 +649,9 @@ export default function Dashboard() {
       }
       if (!target.closest('.column-dropdown-container')) {
         setShowColumnDropdown(false);
+      }
+      if (!target.closest('.export-dropdown-container')) {
+        setShowExportDropdown(false);
       }
       if (!target.closest('.portfolio-dropdown-container')) {
         setShowPortfolioDropdown(false);
@@ -1452,31 +1459,170 @@ export default function Dashboard() {
         <>
           {/* Table Area */}
           <div className="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
-            <h3 className="text-xl font-bold text-white uppercase tracking-widest opacity-80">
-              Holdings
-            </h3>
-            <div className="relative column-dropdown-container">
-              <button 
-                onClick={() => setShowColumnDropdown(!showColumnDropdown)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-fintech-card border border-fintech-border rounded-lg text-sm text-fintech-muted hover:text-white transition-colors"
-              >
-                Columns <ChevronDown size={14} />
-              </button>
-              {showColumnDropdown && (
-                <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-48 bg-slate-900 border border-fintech-border rounded-xl shadow-2xl z-50 p-2 max-h-80 overflow-y-auto">
-                   {Object.keys(visibleColumns).map(col => (
-                     <label key={col} className="flex items-center gap-2 p-2 hover:bg-slate-800 rounded cursor-pointer text-sm text-slate-300">
-                       <input 
-                         type="checkbox" 
-                         checked={visibleColumns[col]} 
-                         onChange={() => setVisibleColumns(prev => ({...prev, [col]: !prev[col]}))}
-                         className="rounded bg-slate-800 border-fintech-border text-fintech-accent focus:ring-fintech-accent"
-                       />
-                       {col === 'index' ? '#' : col === 'portfolioPct' ? 'Portfolio %' : col === 'unrealizedPL' ? 'Unrealized P/L' : col === 'yieldPct' ? 'Div Yield' : col === 'avgBuyPrice' ? 'Avg Price' : col === 'dailyChange' ? 'Daily Change' : col.charAt(0).toUpperCase() + col.slice(1).replace(/([A-Z])/g, ' $1')}
-                     </label>
-                   ))}
-                </div>
+            <div className="flex items-center gap-3">
+              <h3 className="text-xl font-bold text-white uppercase tracking-widest opacity-80">
+                Holdings
+              </h3>
+              {exportToast && (
+                <span className="text-xs font-semibold px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 animate-pulse">
+                  {exportToast}
+                </span>
               )}
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="relative export-dropdown-container">
+                <button
+                  onClick={() => setShowExportDropdown(!showExportDropdown)}
+                  disabled={sortedHoldings.length === 0}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-fintech-card border border-emerald-500/40 hover:border-emerald-400 rounded-lg text-sm text-emerald-400 hover:bg-emerald-500/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  title="Export to Excel or Google Sheets"
+                >
+                  <FileSpreadsheet size={15} />
+                  <span>Export</span>
+                  <ChevronDown size={14} />
+                </button>
+                {showExportDropdown && (
+                  <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-64 bg-slate-900 border border-fintech-border rounded-xl shadow-2xl z-50 p-1.5">
+                    <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-fintech-muted border-b border-fintech-border/60 mb-1">
+                      Spreadsheet Export ({selectedCurrency})
+                    </div>
+                    <button
+                      onClick={() => {
+                        exportPortfolioToExcel({
+                          holdings: sortedHoldings,
+                          watchlist,
+                          aiResults,
+                          selectedCurrency,
+                          convertValue,
+                          totalMarketValue,
+                          totalCostBasis,
+                          totalUnrealizedPL,
+                          totalPortfolioDividends,
+                          totalDailyChange,
+                          avgYield,
+                        });
+                        setShowExportDropdown(false);
+                        setExportToast('Excel workbook (.xls) downloaded!');
+                        setTimeout(() => setExportToast(null), 3500);
+                      }}
+                      className="w-full flex items-center gap-3 px-3 py-2 text-left text-sm text-slate-200 hover:bg-slate-800 rounded-lg transition-colors"
+                    >
+                      <FileSpreadsheet size={16} className="text-emerald-400 shrink-0" />
+                      <div>
+                        <div className="font-medium text-white">Excel Workbook (.xls)</div>
+                        <div className="text-[11px] text-fintech-muted">Holdings, Transactions &amp; Watchlist tabs</div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => {
+                        exportPortfolioToCsv({
+                          holdings: sortedHoldings,
+                          watchlist,
+                          aiResults,
+                          selectedCurrency,
+                          convertValue,
+                          totalMarketValue,
+                          totalCostBasis,
+                          totalUnrealizedPL,
+                          totalPortfolioDividends,
+                          totalDailyChange,
+                          avgYield,
+                        });
+                        setShowExportDropdown(false);
+                        setExportToast('CSV file (.csv) downloaded!');
+                        setTimeout(() => setExportToast(null), 3500);
+                      }}
+                      className="w-full flex items-center gap-3 px-3 py-2 text-left text-sm text-slate-200 hover:bg-slate-800 rounded-lg transition-colors"
+                    >
+                      <Download size={16} className="text-blue-400 shrink-0" />
+                      <div>
+                        <div className="font-medium text-white">Download CSV (.csv)</div>
+                        <div className="text-[11px] text-fintech-muted">Universal format for Excel &amp; Sheets</div>
+                      </div>
+                    </button>
+                    <div className="my-1 border-t border-fintech-border/60" />
+                    <button
+                      onClick={async () => {
+                        await copyPortfolioForGoogleSheets({
+                          holdings: sortedHoldings,
+                          watchlist,
+                          aiResults,
+                          selectedCurrency,
+                          convertValue,
+                          totalMarketValue,
+                          totalCostBasis,
+                          totalUnrealizedPL,
+                          totalPortfolioDividends,
+                          totalDailyChange,
+                          avgYield,
+                        });
+                        setShowExportDropdown(false);
+                        setExportToast('Copied! Press Ctrl+V in Google Sheets');
+                        setTimeout(() => setExportToast(null), 4000);
+                      }}
+                      className="w-full flex items-center gap-3 px-3 py-2 text-left text-sm text-slate-200 hover:bg-slate-800 rounded-lg transition-colors"
+                    >
+                      <Copy size={16} className="text-amber-400 shrink-0" />
+                      <div>
+                        <div className="font-medium text-white">Copy for Google Sheets</div>
+                        <div className="text-[11px] text-fintech-muted">Copy table &amp; paste (Ctrl+V) into any sheet</div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={async () => {
+                        await copyPortfolioForGoogleSheets({
+                          holdings: sortedHoldings,
+                          watchlist,
+                          aiResults,
+                          selectedCurrency,
+                          convertValue,
+                          totalMarketValue,
+                          totalCostBasis,
+                          totalUnrealizedPL,
+                          totalPortfolioDividends,
+                          totalDailyChange,
+                          avgYield,
+                        });
+                        setShowExportDropdown(false);
+                        setExportToast('Copied! Press Ctrl+V in the new Google Sheet');
+                        setTimeout(() => setExportToast(null), 5000);
+                        window.open('https://sheets.new', '_blank', 'noopener,noreferrer');
+                      }}
+                      className="w-full flex items-center gap-3 px-3 py-2 text-left text-sm text-slate-200 hover:bg-slate-800 rounded-lg transition-colors"
+                    >
+                      <ExternalLink size={16} className="text-emerald-400 shrink-0" />
+                      <div>
+                        <div className="font-medium text-white">Open in New Google Sheet</div>
+                        <div className="text-[11px] text-fintech-muted">Copies data &amp; launches sheets.new</div>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="relative column-dropdown-container">
+                <button 
+                  onClick={() => setShowColumnDropdown(!showColumnDropdown)}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-fintech-card border border-fintech-border rounded-lg text-sm text-fintech-muted hover:text-white transition-colors"
+                >
+                  Columns <ChevronDown size={14} />
+                </button>
+                {showColumnDropdown && (
+                  <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-48 bg-slate-900 border border-fintech-border rounded-xl shadow-2xl z-50 p-2 max-h-80 overflow-y-auto">
+                     {Object.keys(visibleColumns).map(col => (
+                       <label key={col} className="flex items-center gap-2 p-2 hover:bg-slate-800 rounded cursor-pointer text-sm text-slate-300">
+                         <input 
+                           type="checkbox" 
+                           checked={visibleColumns[col]} 
+                           onChange={() => setVisibleColumns(prev => ({...prev, [col]: !prev[col]}))}
+                           className="rounded bg-slate-800 border-fintech-border text-fintech-accent focus:ring-fintech-accent"
+                         />
+                         {col === 'index' ? '#' : col === 'portfolioPct' ? 'Portfolio %' : col === 'unrealizedPL' ? 'Unrealized P/L' : col === 'yieldPct' ? 'Div Yield' : col === 'avgBuyPrice' ? 'Avg Price' : col === 'dailyChange' ? 'Daily Change' : col.charAt(0).toUpperCase() + col.slice(1).replace(/([A-Z])/g, ' $1')}
+                       </label>
+                     ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           
