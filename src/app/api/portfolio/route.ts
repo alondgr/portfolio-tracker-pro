@@ -4,13 +4,14 @@ import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
 import yf from 'yahoo-finance2';
 import { calculateDividends } from '@/lib/dividends';
+import { computeHoldingMetrics } from '@/lib/portfolioMath';
 
 // Helper to reliably read holdings from database
 async function getHoldings(userId: string) {
   try {
     const dbTransactions = await prisma.transaction.findMany({
       where: { userId },
-      orderBy: { date: 'asc' }
+      orderBy: [{ date: 'asc' }, { createdAt: 'asc' }]
     });
 
     // Group transactions by symbol
@@ -29,7 +30,8 @@ async function getHoldings(userId: string) {
         type: t.type,
         date: t.date,
         quantity: t.quantity,
-        price: t.avgBuyPrice
+        price: t.avgBuyPrice,
+        createdAt: t.createdAt
       });
     });
 
@@ -55,41 +57,14 @@ export async function GET() {
 
     // Process transactions into aggregates
     const holdings = rawHoldings.map((h: any) => {
-      let totalQty = 0;
-      let totalCostBasis = 0;
-      let realizedPL = 0;
-
-      const transactions = h.transactions || [];
-      const chronologicalTxns = [...transactions].sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-      chronologicalTxns.forEach((t: any) => {
-        const qty = Number(t.quantity);
-        const price = Number(t.price);
-        if (t.type === 'BUY') {
-          totalQty += qty;
-          totalCostBasis += (qty * price);
-        } else if (t.type === 'SELL') {
-          const currentAvgCost = totalQty > 0 ? (totalCostBasis / totalQty) : 0;
-          const costOfSoldShares = currentAvgCost * qty;
-          const saleProceeds = qty * price;
-          
-          realizedPL += (saleProceeds - costOfSoldShares);
-          
-          totalQty -= qty;
-          totalCostBasis = totalQty <= 0 ? 0 : totalCostBasis - costOfSoldShares;
-        } else if (t.type === 'SET_AVG_PRICE') {
-          totalCostBasis = totalQty * price;
-        }
-      });
-
-      const avgBuyPrice = totalQty > 0 ? (totalCostBasis / totalQty) : 0;
+      const { quantity, avgBuyPrice, realizedPL, ledgerTxns } = computeHoldingMetrics(h.transactions || []);
 
       return {
         ...h,
-        quantity: totalQty,
+        quantity,
         avgBuyPrice,
         realizedPL,
-        transactions: transactions.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        transactions: ledgerTxns
       };
     }).filter((h: any) => h.transactions.length > 0);
 

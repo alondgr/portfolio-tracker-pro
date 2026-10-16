@@ -14,6 +14,7 @@ import { useUser, SignUpButton, UserButton } from '@clerk/nextjs';
 import { useConversionTimer } from '@/hooks/useConversionTimer';
 import { fetchWithUtcAuth } from '@/lib/marketFetch';
 import { exportPortfolioToCsv, exportPortfolioToExcel, copyPortfolioForGoogleSheets } from '@/lib/exportPortfolio';
+import { computeHoldingMetrics } from '@/lib/portfolioMath';
 
 const CHART_COLORS = [
   '#3B82F6', '#10B981', '#6366F1', '#8B5CF6', '#EC4899', '#F43F5E', '#F59E0B', '#14B8A6', '#06B6D4',
@@ -302,28 +303,36 @@ export default function Dashboard() {
             const marketData = await quoteRes.json();
             const quotes = Array.isArray(marketData) ? marketData : (marketData.results || []);
             const updated = localHoldings.map((h: any) => {
+              const metrics = Array.isArray(h.transactions) && h.transactions.length > 0
+                ? computeHoldingMetrics(h.transactions)
+                : { quantity: h.quantity, avgBuyPrice: h.avgBuyPrice, ledgerTxns: h.transactions || [] };
+              const qty = metrics.quantity;
+              const avgBuyPrice = metrics.avgBuyPrice;
               const quote = quotes.find((m: any) => m.symbol === h.symbol);
               if (quote) {
                 const currentPrice = quote.price;
-                const marketValue = h.quantity * currentPrice;
-                const unrealizedPL = marketValue - (h.quantity * h.avgBuyPrice);
-                const unrealizedPLPct = ((currentPrice - h.avgBuyPrice) / h.avgBuyPrice) * 100;
+                const marketValue = qty * currentPrice;
+                const unrealizedPL = marketValue - (qty * avgBuyPrice);
+                const unrealizedPLPct = avgBuyPrice > 0 ? ((currentPrice - avgBuyPrice) / avgBuyPrice) * 100 : 0;
                 return {
                   ...h,
+                  quantity: qty,
+                  avgBuyPrice,
                   currentPrice,
                   marketValue,
                   unrealizedPL,
                   unrealizedPLPct,
+                  unrealizedPLPercent: unrealizedPLPct,
                   dailyChange: quote.changeAbs || 0,
                   dailyChangePct: quote.change || 0,
                   currency: quote.currency || 'USD',
                   sector: quote.sector || "Unknown",
                   industry: quote.industry || "Unknown",
                   explanation: quote.explanation || "",
-                  transactions: h.transactions || []
+                  transactions: metrics.ledgerTxns
                 };
               }
-              return h;
+              return { ...h, quantity: qty, avgBuyPrice, transactions: metrics.ledgerTxns };
             });
             setHoldings(updated);
           } else {
@@ -832,7 +841,8 @@ export default function Dashboard() {
             action: 'editTransaction',
             symbol,
             transactionId: editingTxnId,
-            ...editTxnForm
+            ...editTxnForm,
+            quantity: editTxnForm.type === 'SET_AVG_PRICE' ? '0' : editTxnForm.quantity
           }),
         });
         if (!res.ok) throw new Error('Failed to edit transaction');
@@ -846,25 +856,14 @@ export default function Dashboard() {
             holding.transactions[txnIndex] = {
               ...holding.transactions[txnIndex],
               ...editTxnForm,
-              quantity: Number(editTxnForm.quantity),
+              quantity: editTxnForm.type === 'SET_AVG_PRICE' ? 0 : Number(editTxnForm.quantity),
               price: Number(editTxnForm.price)
             };
             
-            // Recalculate total quantity and avg price
-            let totalQty = 0;
-            let totalCost = 0;
-            holding.transactions.forEach((t: any) => {
-              const q = Number(t.quantity);
-              const p = Number(t.price);
-              if (t.type === 'BUY') {
-                totalQty += q;
-                totalCost += q * p;
-              } else {
-                totalQty -= q;
-              }
-            });
-            holding.quantity = totalQty;
-            holding.avgBuyPrice = totalQty > 0 ? totalCost / totalQty : 0;
+            const metrics = computeHoldingMetrics(holding.transactions);
+            holding.quantity = metrics.quantity;
+            holding.avgBuyPrice = metrics.avgBuyPrice;
+            holding.transactions = metrics.ledgerTxns;
             
             localStorage.setItem('ghost_holdings', JSON.stringify(localHoldings));
           }
@@ -905,21 +904,19 @@ export default function Dashboard() {
           const qty = txnForm.type === 'SET_AVG_PRICE' ? 0 : Number(txnForm.quantity);
           const price = Number(txnForm.price);
           
-          if (txnForm.type === 'BUY') {
-            holding.avgBuyPrice = ((holding.avgBuyPrice * holding.quantity) + (price * qty)) / (holding.quantity + qty);
-            holding.quantity += qty;
-          } else if (txnForm.type === 'SELL') {
-            holding.quantity -= qty;
-          } else if (txnForm.type === 'SET_AVG_PRICE') {
-            holding.avgBuyPrice = price;
-          }
-          
           holding.transactions.push({
             id: 'ghost-' + Date.now(),
             ...txnForm,
             quantity: qty,
-            price: price
+            price: price,
+            createdAt: new Date().toISOString()
           });
+
+          const metrics = computeHoldingMetrics(holding.transactions);
+          holding.quantity = metrics.quantity;
+          holding.avgBuyPrice = metrics.avgBuyPrice;
+          holding.transactions = metrics.ledgerTxns;
+
           localStorage.setItem('ghost_holdings', JSON.stringify(localHoldings));
         }
       }
@@ -951,21 +948,10 @@ export default function Dashboard() {
         if (holding) {
           holding.transactions = holding.transactions.filter((t: any) => t.id !== transactionId);
           
-          // Recalculate totals
-          let totalQty = 0;
-          let totalCost = 0;
-          holding.transactions.forEach((t: any) => {
-            const q = Number(t.quantity);
-            const p = Number(t.price);
-            if (t.type === 'BUY') {
-              totalQty += q;
-              totalCost += q * p;
-            } else {
-              totalQty -= q;
-            }
-          });
-          holding.quantity = totalQty;
-          holding.avgBuyPrice = totalQty > 0 ? totalCost / totalQty : 0;
+          const metrics = computeHoldingMetrics(holding.transactions);
+          holding.quantity = metrics.quantity;
+          holding.avgBuyPrice = metrics.avgBuyPrice;
+          holding.transactions = metrics.ledgerTxns;
           
           if (holding.transactions.length === 0) {
             const index = localHoldings.indexOf(holding);
@@ -1716,7 +1702,16 @@ export default function Dashboard() {
                                         <label className="block text-xs font-medium text-fintech-muted mb-1">Type</label>
                                         <select
                                           value={txnForm.type}
-                                          onChange={e => setTxnForm({ ...txnForm, type: e.target.value })}
+                                          onChange={e => {
+                                            const nextType = e.target.value;
+                                            setTxnForm(prev => ({
+                                              ...prev,
+                                              type: nextType,
+                                              price: nextType === 'SET_AVG_PRICE' && h.avgBuyPrice
+                                                ? Number(h.avgBuyPrice.toFixed(2)).toString()
+                                                : prev.price
+                                            }));
+                                          }}
                                           className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-fintech-accent"
                                         >
                                           <option value="BUY">Buy</option>
@@ -1746,7 +1741,9 @@ export default function Dashboard() {
                                         </div>
                                       )}
                                       <div className="flex-1 min-w-[120px]">
-                                        <label className="block text-xs font-medium text-fintech-muted mb-1">Price</label>
+                                        <label className="block text-xs font-medium text-fintech-muted mb-1">
+                                          {txnForm.type === 'SET_AVG_PRICE' ? 'New Avg Price' : 'Price'}
+                                        </label>
                                         <input
                                           type="number" step="any" required
                                           value={txnForm.price}

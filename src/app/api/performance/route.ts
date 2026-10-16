@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
 import yf from 'yahoo-finance2';
+import { sortTransactionsChronologically } from '@/lib/portfolioMath';
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const filterSymbols = searchParams.get('symbols')?.split(',');
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
 
     const dbTransactions = await prisma.transaction.findMany({
       where,
-      orderBy: { date: 'asc' }
+      orderBy: [{ date: 'asc' }, { createdAt: 'asc' }]
     });
 
     if (!dbTransactions || dbTransactions.length === 0) {
@@ -40,10 +41,14 @@ export async function GET(request: Request) {
         type: t.type,
         date: t.date,
         quantity: t.quantity,
-        price: t.avgBuyPrice
+        price: t.avgBuyPrice,
+        createdAt: t.createdAt
       });
     });
-    const holdings = Object.values(holdingsMap);
+    const holdings = Object.values(holdingsMap).map((h: any) => ({
+      ...h,
+      transactions: sortTransactionsChronologically(h.transactions || [])
+    }));
 
     // 1. Get all unique symbols and find inception date
     const symbols = Array.from(new Set(holdings.map((h: any) => h.symbol)));
