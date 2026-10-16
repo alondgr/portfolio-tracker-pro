@@ -1,11 +1,21 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import yf from 'yahoo-finance2';
+import { validateUtcTimestampDrift } from '@/lib/marketFetch';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
+    const reqTimestamp = request.headers.get('X-Request-Timestamp');
+    const driftCheck = validateUtcTimestampDrift(reqTimestamp);
+    if (!driftCheck.valid) {
+      return NextResponse.json(
+        { error: 'Invalid Timestamp: request clock drift exceeds 30s UTC window', driftMs: driftCheck.driftMs },
+        { status: 403 }
+      );
+    }
+
     // Public API - allowed for Ghost users
     const { searchParams } = new URL(request.url);
     const querySymbols = searchParams.get('symbols');

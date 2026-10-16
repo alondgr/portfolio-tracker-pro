@@ -1,8 +1,18 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import yf from 'yahoo-finance2';
+import { validateUtcTimestampDrift } from '@/lib/marketFetch';
 
 export async function GET(request: Request) {
+  const reqTimestamp = request.headers.get('X-Request-Timestamp');
+  const driftCheck = validateUtcTimestampDrift(reqTimestamp);
+  if (!driftCheck.valid) {
+    return NextResponse.json(
+      { error: 'Invalid Timestamp: request clock drift exceeds 30s UTC window', driftMs: driftCheck.driftMs },
+      { status: 403 }
+    );
+  }
+
   const { searchParams } = new URL(request.url);
   const symbol = searchParams.get('symbol');
   
@@ -16,7 +26,8 @@ export async function GET(request: Request) {
     const yahooFinance = new (yf.YahooFinance || yf)();
     const quote = await yahooFinance.quote(symbol);
     return NextResponse.json({ 
-      price: quote?.regularMarketPrice || quote?.postMarketPrice || 0 
+      price: quote?.regularMarketPrice || quote?.postMarketPrice || 0,
+      timestampUtc: driftCheck.timestampUtc
     });
   } catch (error: any) {
     console.error('Price API Error:', error);

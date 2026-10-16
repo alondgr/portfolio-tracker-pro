@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useUser, SignUpButton, UserButton } from '@clerk/nextjs';
 import { useConversionTimer } from '@/hooks/useConversionTimer';
+import { fetchWithUtcAuth } from '@/lib/marketFetch';
 
 const CHART_COLORS = [
   '#3B82F6', '#10B981', '#6366F1', '#8B5CF6', '#EC4899', '#F43F5E', '#F59E0B', '#14B8A6', '#06B6D4',
@@ -200,7 +201,7 @@ export default function Dashboard() {
   // Main Modal state (for fresh additions only now)
   const [showModal, setShowModal] = useState(false);
   const [showDividendModal, setShowDividendModal] = useState(false);
-  const [formData, setFormData] = useState({ symbol: '', quantity: '1', avgBuyPrice: '', date: new Date().toISOString().split('T')[0] });
+  const [formData, setFormData] = useState({ symbol: '', quantity: '1', avgBuyPrice: '', date: '' });
   const [submitLoading, setSubmitLoading] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -208,6 +209,7 @@ export default function Dashboard() {
   const [isSymbolSelected, setIsSymbolSelected] = useState(false);
   const [selectedCurrency, setSelectedCurrency] = useState('USD');
   const [rates, setRates] = useState<Record<string, number>>({ USD: 1 });
+  const [mountedDateStr, setMountedDateStr] = useState<string>('');
 
   const currencySymbols: Record<string, string> = {
     USD: '$',
@@ -218,7 +220,14 @@ export default function Dashboard() {
 
   // Inline Transaction Form state
   const [txnFormActiveSymbol, setTxnFormActiveSymbol] = useState<string | null>(null);
-  const [txnForm, setTxnForm] = useState({ type: 'BUY', quantity: '', price: '', date: new Date().toISOString().split('T')[0] });
+  const [txnForm, setTxnForm] = useState({ type: 'BUY', quantity: '', price: '', date: '' });
+
+  useEffect(() => {
+    const todayIso = new Date().toISOString().split('T')[0];
+    setFormData(prev => ({ ...prev, date: prev.date || todayIso }));
+    setTxnForm(prev => ({ ...prev, date: prev.date || todayIso }));
+    setMountedDateStr(new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+  }, []);
 
   // Inline Edit Transaction state
   const [editingTxnId, setEditingTxnId] = useState<string | null>(null);
@@ -604,8 +613,7 @@ export default function Dashboard() {
 
   const fetchMarketData = async () => {
     try {
-      const res = await fetch('/api/market-data');
-      const data = await res.json();
+      const data = await fetchWithUtcAuth('/api/market-data');
       if (data.results) setMarketData(data.results);
     } catch (err) {
       console.error('Error fetching market data:', err);
@@ -739,8 +747,7 @@ export default function Dashboard() {
 
   const fetchCurrentPrice = async (symbol: string) => {
     try {
-      const res = await fetch(`/api/price?symbol=${symbol}`);
-      const data = await res.json();
+      const data = await fetchWithUtcAuth(`/api/price?symbol=${symbol}`);
       if (data.price) {
         setFormData(prev => ({ ...prev, avgBuyPrice: data.price.toString() }));
       }
@@ -1042,7 +1049,7 @@ export default function Dashboard() {
 
   const isProfit = totalUnrealizedPL >= 0;
 
-  let latestMarketDateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  let latestMarketDateStr = mountedDateStr;
   if (holdings.length > 0) {
     const validDates = holdings.map(h => h.marketDate ? new Date(h.marketDate).getTime() : 0).filter(t => t > 0);
     if (validDates.length > 0) {
