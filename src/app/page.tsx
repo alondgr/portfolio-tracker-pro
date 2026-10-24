@@ -1014,6 +1014,22 @@ export default function Dashboard() {
       return 0;
     }
 
+    if (key === 'dailyChange') {
+      const aVal = a.dailyChangePct ?? 0;
+      const bVal = b.dailyChangePct ?? 0;
+      if (aVal < bVal) return direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return direction === 'asc' ? 1 : -1;
+      return 0;
+    }
+
+    if (key === 'unrealizedPL') {
+      const aVal = a.unrealizedPLPercent ?? a.unrealizedPLPct ?? 0;
+      const bVal = b.unrealizedPLPercent ?? b.unrealizedPLPct ?? 0;
+      if (aVal < bVal) return direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return direction === 'asc' ? 1 : -1;
+      return 0;
+    }
+
     let aVal = a[key] ?? '';
     let bVal = b[key] ?? '';
 
