@@ -24,34 +24,37 @@ export async function GET() {
     const yahooFinance = new (yf.YahooFinance || yf)();
     
     const quotesMap: Record<string, any> = {};
-    await Promise.all(symbols.map(async (sym: string) => {
-      try {
-        const summary = await yahooFinance.quoteSummary(sym, { modules: ['price', 'assetProfile'] }) as any;
-        quotesMap[sym] = {
-          price: summary.price?.regularMarketPrice || 0,
-          change: summary.price?.regularMarketChangePercent || 0,
-          changeAbs: summary.price?.regularMarketChange || 0,
-          name: summary.price?.shortName || summary.price?.longName || sym,
-          currency: summary.price?.currency || 'USD',
-          sector: summary.assetProfile?.sector || "Unknown",
-          industry: summary.assetProfile?.industry || "Unknown",
-          explanation: summary.assetProfile?.longBusinessSummary || "",
-        };
-      } catch (e) {
-        // Fallback to simple quote if quoteSummary fails
-        try {
-          const q = await yahooFinance.quote(sym);
-          quotesMap[sym] = {
-            price: q?.regularMarketPrice || 0,
-            change: q?.regularMarketChangePercent || 0,
-            changeAbs: q?.regularMarketChange || 0,
-            name: q?.shortName || q?.longName || sym,
-            currency: q?.currency || 'USD',
+    try {
+      const batchQuotes = await yahooFinance.quote(symbols);
+      const quoteList = Array.isArray(batchQuotes) ? batchQuotes : (batchQuotes ? [batchQuotes] : []);
+      quoteList.forEach((q: any) => {
+        if (q && q.symbol) {
+          quotesMap[q.symbol] = {
+            price: q.regularMarketPrice || q.postMarketPrice || 0,
+            change: q.regularMarketChangePercent || 0,
+            changeAbs: q.regularMarketChange || 0,
+            name: q.shortName || q.longName || q.symbol,
+            currency: q.currency || 'USD',
             sector: "Unknown",
             industry: "Unknown",
             explanation: "",
           };
-        } catch (err) {}
+        }
+      });
+    } catch (err) {
+      console.error('Batch watchlist quote error:', err);
+    }
+
+    await Promise.all(symbols.map(async (sym: string) => {
+      try {
+        const summary = await yahooFinance.quoteSummary(sym, { modules: ['assetProfile'] }) as any;
+        if (quotesMap[sym]) {
+          quotesMap[sym].sector = summary.assetProfile?.sector || "Unknown";
+          quotesMap[sym].industry = summary.assetProfile?.industry || "Unknown";
+          quotesMap[sym].explanation = summary.assetProfile?.longBusinessSummary || "";
+        }
+      } catch (e) {
+        // Ignore if assetProfile is unavailable for index/crypto/ETF
       }
     }));
 

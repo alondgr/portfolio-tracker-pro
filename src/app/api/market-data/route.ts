@@ -3,7 +3,10 @@ import { auth } from '@clerk/nextjs/server';
 import yf from 'yahoo-finance2';
 import { validateUtcTimestampDrift } from '@/lib/marketFetch';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60; // 60-second shared edge cache
+
+const QUOTE_CACHE_TTL_MS = 60 * 1000;
+const quoteBatchCache = new Map<string, { timestamp: number; results: any[] }>();
 
 export async function GET(request: Request) {
   try {
@@ -23,7 +26,7 @@ export async function GET(request: Request) {
     const yahooFinance = new (yf.YahooFinance || yf)();
     
     // Global Indices and major assets OR requested user symbols
-    const symbols = querySymbols ? querySymbols.split(',') : [
+    const symbols = querySymbols ? querySymbols.split(',').map(s => s.trim().toUpperCase()).filter(Boolean) : [
       '^GSPC', // S&P 500
       '^IXIC', // NASDAQ
       '^DJI',  // Dow Jones
@@ -39,6 +42,16 @@ export async function GET(request: Request) {
       'DX-Y.NYB' // DXY
     ];
 
+    const cacheKey = symbols.slice().sort().join(',');
+    const cached = quoteBatchCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < QUOTE_CACHE_TTL_MS) {
+      return NextResponse.json(
+        { results: cached.results, cached: true },
+        { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=60' } }
+      );
+    }
+
+    // Single batch request for all symbols to respect provider burst rate limits
     const quotes = await yahooFinance.quote(symbols);
     
     let results = (Array.isArray(quotes) ? quotes : [quotes]).map((q: any) => ({
@@ -67,7 +80,12 @@ export async function GET(request: Request) {
       }));
     }
 
-    return NextResponse.json({ results });
+    quoteBatchCache.set(cacheKey, { timestamp: Date.now(), results });
+
+    return NextResponse.json(
+      { results },
+      { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=60' } }
+    );
   } catch (error: any) {
     console.error('Market Data API Error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

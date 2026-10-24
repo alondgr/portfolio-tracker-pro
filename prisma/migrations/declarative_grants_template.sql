@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS public.portfolio_snapshots (
 
 -- Explicit Data API Grants (Mandatory post-October 30, 2026)
 GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+REVOKE ALL ON public.portfolio_snapshots FROM anon;
 GRANT SELECT, INSERT ON public.portfolio_snapshots TO authenticated;
 GRANT ALL ON public.portfolio_snapshots TO service_role;
 
@@ -42,16 +43,19 @@ END $$;
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Transaction') THEN
+    EXECUTE 'REVOKE ALL ON TABLE public."Transaction" FROM anon';
     EXECUTE 'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public."Transaction" TO authenticated';
     EXECUTE 'GRANT ALL ON TABLE public."Transaction" TO service_role';
   END IF;
 
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Watchlist') THEN
+    EXECUTE 'REVOKE ALL ON TABLE public."Watchlist" FROM anon';
     EXECUTE 'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public."Watchlist" TO authenticated';
     EXECUTE 'GRANT ALL ON TABLE public."Watchlist" TO service_role';
   END IF;
 
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'SystemHealthLog') THEN
+    EXECUTE 'REVOKE ALL ON TABLE public."SystemHealthLog" FROM anon';
     EXECUTE 'GRANT SELECT, INSERT ON TABLE public."SystemHealthLog" TO authenticated';
     EXECUTE 'GRANT ALL ON TABLE public."SystemHealthLog" TO service_role';
   END IF;
