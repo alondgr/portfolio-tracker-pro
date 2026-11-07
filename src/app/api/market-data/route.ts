@@ -3,7 +3,7 @@ import { auth } from '@clerk/nextjs/server';
 import yf from 'yahoo-finance2';
 import { validateUtcTimestampDrift } from '@/lib/marketFetch';
 
-export const revalidate = 60; // 60-second shared edge cache
+export const dynamic = 'force-dynamic';
 
 const QUOTE_CACHE_TTL_MS = 60 * 1000;
 const quoteBatchCache = new Map<string, { timestamp: number; results: any[] }>();
@@ -42,7 +42,7 @@ export async function GET(request: Request) {
       'DX-Y.NYB' // DXY
     ];
 
-    const cacheKey = symbols.slice().sort().join(',');
+    const cacheKey = symbols.slice().sort((a, b) => a.localeCompare(b)).join(',');
     const cached = quoteBatchCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < QUOTE_CACHE_TTL_MS) {
       return NextResponse.json(
