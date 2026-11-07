@@ -5,10 +5,12 @@ import AllocationCharts from '@/components/AllocationCharts';
 import PerformanceChart from '@/components/PerformanceChart';
 import TickerTape from '@/components/TickerTape';
 import WisdomQuote from '@/components/WisdomQuote';
+import TopMoversWidget from '@/components/TopMoversWidget';
+import TopMarketCapWidget from '@/components/TopMarketCapWidget';
 import { 
   Building2, ChevronDown, ChevronUp, LogOut, Search, TrendingDown, TrendingUp, X, Check,
   ArrowUpDown, RefreshCw, Plus, Star, AlertCircle, RefreshCcw, Trash2, Edit2, Eye, EyeOff, Coins, Info, Sparkles,
-  Download, FileSpreadsheet, Copy, ExternalLink
+  Download, FileSpreadsheet, Copy, ExternalLink, LayoutGrid
 } from 'lucide-react';
 import { useUser, SignUpButton, UserButton } from '@clerk/nextjs';
 import { useConversionTimer } from '@/hooks/useConversionTimer';
@@ -51,7 +53,19 @@ const COMPANY_EXPLANATIONS: Record<string, string> = {
   ASML: "The absolute monopoly in advanced semiconductor lithography. They build the incredibly complex, irreplaceable extreme ultraviolet machines required to physically manufacture the world's most advanced microchips.",
   MU: "A premier global memory chip powerhouse. They manufacture the critical, high-performance DRAM and NAND storage infrastructure physically required to power massive artificial intelligence data centers.",
   VRT: "An elite data center infrastructure provider. They design the massive liquid cooling systems and power management grids physically required to keep the global AI supercomputing revolution running safely.",
-  B: "A diversified industrial manufacturing powerhouse. They design critical engineered components for aerospace and medical systems, capturing rock-solid, highly predictable cash flows from global industrial expansion."
+  B: "A diversified industrial manufacturing powerhouse. They design critical engineered components for aerospace and medical systems, capturing rock-solid, highly predictable cash flows from global industrial expansion.",
+  GOOGL: "The undisputed global search and digital advertising titan. Backed by YouTube, Android, Google Cloud, and Gemini AI infrastructure, it generates massive free cash flow across billions of daily users.",
+  META: "The dominant global social media and AI-driven advertising ecosystem. Connecting over three billion daily users across Facebook, Instagram, and WhatsApp, it converts unmatched attention into elite operating margins.",
+  "BRK-B": "Warren Buffett's legendary fortress conglomerate. Combining massive insurance float, critical North American rail and energy infrastructure, and a giant cash-flowing equity portfolio.",
+  LLY: "A global pharmaceutical powerhouse leading the metabolic health and GLP-1 therapeutic revolution. Its blockbuster patent portfolio drives extraordinary revenue growth and pricing power.",
+  WMT: "The world's largest omnichannel retail fortress. Its unmatched global supply chain scale and everyday low-price dominance make it an all-weather consumer staple powerhouse.",
+  JPM: "The premier global fortress bank. Commanding dominant market share in investment banking, commercial lending, and wealth management with an industry-leading balance sheet.",
+  V: "The dominant global digital payments tollbooth. Processing trillions in commerce volume across 200+ countries with ultra-high operating margins and zero credit risk.",
+  XOM: "An integrated global energy supermajor. Controlling world-class low-cost oil, gas, and refining assets that generate massive cash flows and decades of uninterrupted dividend growth.",
+  UNH: "The largest vertically integrated healthcare and insurance enterprise in the United States, combining UnitedHealthcare coverage with Optum's data-driven care delivery network.",
+  MA: "A global payment network duopoly powerhouse. Capturing high-margin cross-border transaction fees and digital payment secular growth worldwide.",
+  NFLX: "The undisputed global streaming entertainment leader. Leveraging unmatched content scale and global subscriber pricing power to generate rapidly expanding free cash flow.",
+  COST: "An elite membership-warehouse retail compounder. Its fanatical customer loyalty and high-margin membership fee model create a virtually unbreakable retail moat."
 };
 
 
@@ -102,7 +116,34 @@ export default function Dashboard() {
   // Column Visibility & Export State
   const [showColumnDropdown, setShowColumnDropdown] = useState(false);
   const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const [showWidgetsDropdown, setShowWidgetsDropdown] = useState(false);
   const [exportToast, setExportToast] = useState<string | null>(null);
+  const [visibleWidgets, setVisibleWidgets] = useState<Record<string, boolean>>({
+    topMovers: true,
+    topMarketCap: true,
+    performanceChart: true,
+    allocationCharts: true,
+  });
+
+  useEffect(() => {
+    const savedWidgets = localStorage.getItem('portfolioVisibleWidgets');
+    if (savedWidgets) {
+      try {
+        const parsed = JSON.parse(savedWidgets);
+        if (parsed && typeof parsed === 'object') {
+          setVisibleWidgets(prev => ({ ...prev, ...parsed }));
+        }
+      } catch (e) {}
+    }
+  }, []);
+
+  const toggleWidgetVisibility = (key: string) => {
+    setVisibleWidgets(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      localStorage.setItem('portfolioVisibleWidgets', JSON.stringify(next));
+      return next;
+    });
+  };
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
     index: true,
     symbol: true,
@@ -664,6 +705,9 @@ export default function Dashboard() {
       }
       if (!target.closest('.portfolio-dropdown-container')) {
         setShowPortfolioDropdown(false);
+      }
+      if (!target.closest('.widgets-dropdown-container')) {
+        setShowWidgetsDropdown(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -1340,6 +1384,40 @@ export default function Dashboard() {
               </div>
             )}
           </div>
+          <div className="relative widgets-dropdown-container order-3 sm:order-none">
+            <button
+              onClick={() => setShowWidgetsDropdown(!showWidgetsDropdown)}
+              className="flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all duration-300 border bg-fintech-card border-fintech-border text-fintech-text hover:bg-fintech-border"
+              title="Customize Dashboard Widgets"
+            >
+              <LayoutGrid size={15} className="text-fintech-accent" />
+              <span>Widgets</span>
+              <ChevronDown size={14} />
+            </button>
+            {showWidgetsDropdown && (
+              <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-64 bg-slate-900 border border-fintech-border rounded-xl shadow-2xl z-50 p-2">
+                <div className="p-2 border-b border-fintech-border mb-1 flex justify-between items-center">
+                  <span className="text-sm font-semibold text-white">Dashboard Widgets</span>
+                </div>
+                {[
+                  { id: 'topMovers', label: 'Top Movers & Leaders' },
+                  { id: 'topMarketCap', label: 'Top 10 by Market Cap' },
+                  { id: 'performanceChart', label: 'Performance Chart' },
+                  { id: 'allocationCharts', label: 'Sector & Industry Charts' },
+                ].map(w => (
+                  <label key={w.id} className="flex items-center gap-3 p-2 hover:bg-slate-800 rounded-lg cursor-pointer text-sm text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={!!visibleWidgets[w.id]}
+                      onChange={() => toggleWidgetVisibility(w.id)}
+                      className="rounded bg-slate-800 border-fintech-border text-fintech-accent focus:ring-fintech-accent"
+                    />
+                    <span className="font-medium text-white">{w.label}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="flex gap-2 order-4 sm:order-none">
             <button
               onClick={runAiAnalysis}
@@ -1891,13 +1969,50 @@ export default function Dashboard() {
             </div>
           </div>
           
-          <PerformanceChart 
-            data={performanceData.map(d => ({ ...d, value: convertValue(d.value, 'USD') }))} 
-            hideValues={hideValues} 
-            currencySymbol={currencySymbols[selectedCurrency] || '$'}
-          />
+          {visibleWidgets.topMovers && (
+            <TopMoversWidget
+              holdings={sortedHoldings}
+              watchlist={watchlist}
+              hideValues={hideValues}
+              formatCurrency={formatCurrency}
+              convertValue={convertValue}
+              onSelectSymbol={(sym) => setExplanationSymbol(sym)}
+            />
+          )}
+
+          {visibleWidgets.topMarketCap && (
+            <TopMarketCapWidget
+              holdings={holdings}
+              watchlist={watchlist}
+              currencySymbol={currencySymbols[selectedCurrency] || '$'}
+              convertValue={convertValue}
+              formatCurrency={formatCurrency}
+              onSelectSymbol={(sym) => setExplanationSymbol(sym)}
+              onQuickAddHolding={(sym, price) => {
+                setFormData({
+                  symbol: sym,
+                  quantity: '1',
+                  avgBuyPrice: (price || 0).toString(),
+                  date: new Date().toISOString().split('T')[0],
+                });
+                setIsSymbolSelected(true);
+                setSearchResults([]);
+                setShowModal(true);
+              }}
+            />
+          )}
+
+          {visibleWidgets.performanceChart && (
+            <PerformanceChart 
+              data={performanceData.map(d => ({ ...d, value: convertValue(d.value, 'USD') }))} 
+              hideValues={hideValues} 
+              currencySymbol={currencySymbols[selectedCurrency] || '$'}
+            />
+          )}
           
-          <AllocationCharts holdings={sortedHoldings} />
+          {visibleWidgets.allocationCharts && (
+            <AllocationCharts holdings={sortedHoldings} />
+          )}
 
           {/* Watchlist Section */}
           <div className="mt-12 mb-12">
