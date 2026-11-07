@@ -51,7 +51,7 @@ export default function TopMarketCapWidget({
   const [companies, setCompanies] = useState<TopMarketCapCompany[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentSlide, setCurrentSlide] = useState(0); // 0 = #1-10, 1 = #11-20
+  const [currentSlide, setCurrentSlide] = useState(0); // 0..9 (10 companies per view)
 
   const fetchTopMarketCap = async () => {
     setLoading(true);
@@ -90,9 +90,9 @@ export default function TopMarketCapWidget({
   const watchlistSymbols = new Set(watchlist.map(w => w.symbol));
 
   const totalSlides = Math.max(1, Math.ceil(companies.length / ITEMS_PER_VIEW));
-  const ownedInTop20 = companies.filter(c => heldSymbols.has(c.symbol)).length;
+  const ownedInTop100 = companies.filter(c => heldSymbols.has(c.symbol)).length;
   const maxMarketCap = companies.length > 0 ? Math.max(...companies.map(c => c.marketCap), 1) : 1;
-  const totalTop20MarketCap = companies.reduce((sum, c) => sum + c.marketCap, 0);
+  const totalTop100MarketCap = companies.reduce((sum, c) => sum + c.marketCap, 0);
 
   const handlePrevSlide = () => {
     setCurrentSlide(prev => (prev - 1 + totalSlides) % totalSlides);
@@ -125,7 +125,7 @@ export default function TopMarketCapWidget({
           const isOwned = heldSymbols.has(company.symbol);
           const isWatched = !isOwned && watchlistSymbols.has(company.symbol);
           const isPositive = (company.changePct || 0) >= 0;
-          const capWidthPct = Math.max(8, Math.round((company.marketCap / maxMarketCap) * 100));
+          const capWidthPct = Math.max(6, Math.round((company.marketCap / maxMarketCap) * 100));
 
           return (
             <div
@@ -147,7 +147,7 @@ export default function TopMarketCapWidget({
                 {/* Left: Rank + Symbol & Name */}
                 <div className="flex items-center gap-3 min-w-0">
                   <div
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs shrink-0 ${getRankBadgeClass(
+                    className={`w-9 h-8 px-1 rounded-lg flex items-center justify-center text-xs shrink-0 ${getRankBadgeClass(
                       company.rank
                     )}`}
                   >
@@ -232,16 +232,16 @@ export default function TopMarketCapWidget({
   return (
     <div className="bg-fintech-card border border-fintech-border rounded-2xl p-6 shadow-xl mb-8">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-4">
         <div>
           <div className="flex items-center gap-2">
             <Crown size={20} className="text-amber-400" />
             <h3 className="text-lg font-semibold text-fintech-text uppercase tracking-widest opacity-80">
-              Top 20 Largest Companies by Market Cap
+              Top 100 Largest Companies by Market Cap
             </h3>
           </div>
           <p className="text-xs text-fintech-muted mt-1">
-            Live global mega-cap leaderboard ranked by total market capitalization (showing #{currentSlide * ITEMS_PER_VIEW + 1}–#{Math.min((currentSlide + 1) * ITEMS_PER_VIEW, companies.length || 20)})
+            Live global mega-cap leaderboard ranked by total market capitalization (showing #{currentSlide * ITEMS_PER_VIEW + 1}–#{Math.min((currentSlide + 1) * ITEMS_PER_VIEW, companies.length || 100)} of {companies.length || 100})
           </p>
         </div>
 
@@ -249,53 +249,13 @@ export default function TopMarketCapWidget({
           {companies.length > 0 && (
             <>
               <div className="px-3 py-1.5 rounded-xl bg-fintech-bg border border-fintech-border text-xs font-medium text-fintech-muted">
-                Top 20 Combined:{' '}
-                <span className="text-white font-bold">{formatMarketCap(totalTop20MarketCap)}</span>
+                Top 100 Combined:{' '}
+                <span className="text-white font-bold">{formatMarketCap(totalTop100MarketCap)}</span>
               </div>
               <div className="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-bold text-emerald-400">
-                {ownedInTop20}/{companies.length} Owned
+                {ownedInTop100}/{companies.length} Owned
               </div>
             </>
-          )}
-
-          {/* Carousel Controls in Header */}
-          {totalSlides > 1 && (
-            <div className="flex items-center bg-fintech-bg border border-fintech-border rounded-xl p-1 gap-1">
-              <button
-                type="button"
-                onClick={handlePrevSlide}
-                className="p-1.5 rounded-lg text-fintech-muted hover:text-white hover:bg-fintech-card transition-colors"
-                title="Previous 10"
-              >
-                <ChevronLeft size={15} />
-              </button>
-              {Array.from({ length: totalSlides }).map((_, idx) => {
-                const startRank = idx * ITEMS_PER_VIEW + 1;
-                const endRank = Math.min((idx + 1) * ITEMS_PER_VIEW, companies.length || 20);
-                return (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setCurrentSlide(idx)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                      currentSlide === idx
-                        ? 'bg-fintech-accent text-white shadow-sm'
-                        : 'text-fintech-muted hover:text-white'
-                    }`}
-                  >
-                    #{startRank}–{endRank}
-                  </button>
-                );
-              })}
-              <button
-                type="button"
-                onClick={handleNextSlide}
-                className="p-1.5 rounded-lg text-fintech-muted hover:text-white hover:bg-fintech-card transition-colors"
-                title="Next 10"
-              >
-                <ChevronRight size={15} />
-              </button>
-            </div>
           )}
 
           <button
@@ -309,6 +269,50 @@ export default function TopMarketCapWidget({
           </button>
         </div>
       </div>
+
+      {/* 10-Slide Range Selector Bar */}
+      {totalSlides > 1 && (
+        <div className="flex items-center justify-between gap-2 mb-5 bg-fintech-bg/80 border border-fintech-border rounded-xl p-1.5 overflow-x-auto no-scrollbar">
+          <button
+            type="button"
+            onClick={handlePrevSlide}
+            className="p-1.5 rounded-lg text-fintech-muted hover:text-white hover:bg-fintech-card transition-colors shrink-0"
+            title="Previous 10"
+          >
+            <ChevronLeft size={16} />
+          </button>
+
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+            {Array.from({ length: totalSlides }).map((_, idx) => {
+              const startRank = idx * ITEMS_PER_VIEW + 1;
+              const endRank = Math.min((idx + 1) * ITEMS_PER_VIEW, companies.length || 100);
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setCurrentSlide(idx)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
+                    currentSlide === idx
+                      ? 'bg-fintech-accent text-white shadow-sm'
+                      : 'text-fintech-muted hover:text-white hover:bg-fintech-card/60'
+                  }`}
+                >
+                  #{startRank}–{endRank}
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            onClick={handleNextSlide}
+            className="p-1.5 rounded-lg text-fintech-muted hover:text-white hover:bg-fintech-card transition-colors shrink-0"
+            title="Next 10"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
 
       {loading && companies.length === 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
@@ -351,16 +355,16 @@ export default function TopMarketCapWidget({
                 Prev 10
               </button>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 {Array.from({ length: totalSlides }).map((_, idx) => (
                   <button
                     key={idx}
                     type="button"
                     onClick={() => setCurrentSlide(idx)}
-                    aria-label={`View slide ${idx + 1}`}
+                    aria-label={`View ranks ${idx * 10 + 1} to ${(idx + 1) * 10}`}
                     className={`h-2 rounded-full transition-all duration-300 ${
                       currentSlide === idx
-                        ? 'w-7 bg-fintech-accent'
+                        ? 'w-6 bg-fintech-accent'
                         : 'w-2 bg-slate-700 hover:bg-slate-500'
                     }`}
                   />
