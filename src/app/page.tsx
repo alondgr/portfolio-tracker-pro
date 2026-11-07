@@ -65,7 +65,21 @@ const COMPANY_EXPLANATIONS: Record<string, string> = {
   UNH: "The largest vertically integrated healthcare and insurance enterprise in the United States, combining UnitedHealthcare coverage with Optum's data-driven care delivery network.",
   MA: "A global payment network duopoly powerhouse. Capturing high-margin cross-border transaction fees and digital payment secular growth worldwide.",
   NFLX: "The undisputed global streaming entertainment leader. Leveraging unmatched content scale and global subscriber pricing power to generate rapidly expanding free cash flow.",
-  COST: "An elite membership-warehouse retail compounder. Its fanatical customer loyalty and high-margin membership fee model create a virtually unbreakable retail moat."
+  COST: "An elite membership-warehouse retail compounder. Its fanatical customer loyalty and high-margin membership fee model create a virtually unbreakable retail moat.",
+  JNJ: "A diversified global healthcare titan across innovative pharmaceuticals and medical devices, backed by a AAA-rated balance sheet and over 60 years of dividend growth.",
+  PG: "The premier global consumer staples powerhouse. Its portfolio of household brands commands unmatched shelf space and pricing power in every economic cycle.",
+  HD: "The dominant North American home improvement retailer. Serving both professional contractors and DIY homeowners with massive logistics and distribution scale.",
+  ABBV: "A biopharmaceutical leader in immunology, oncology, and neuroscience, generating massive cash flows and industry-leading shareholder payouts.",
+  BAC: "One of America's premier money-center banking institutions, capturing massive consumer deposit scale, wealth management, and global corporate banking flows.",
+  SAP: "The backbone of global enterprise resource planning (ERP) software. Mission-critical cloud migrations lock in recurring revenue from the world's largest corporations.",
+  CRM: "The global leader in enterprise customer relationship management (CRM) and autonomous AI enterprise workflows.",
+  AMD: "A premier high-performance computing and AI accelerator designer powering next-generation cloud data centers, PCs, and gaming systems.",
+  CVX: "A premier integrated energy supermajor with low-cost Permian and global LNG assets, engineered for disciplined capital returns and durable dividends.",
+  KO: "The world's most recognized beverage empire. Its asset-light global bottling and syrup distribution network spins off recession-proof cash flows in 200+ countries.",
+  TMUS: "The fastest-growing US 5G wireless network leader, converting spectrum dominance into industry-leading subscriber and free cash flow growth.",
+  WFC: "A top-tier American commercial and consumer banking franchise with coast-to-coast mortgage, deposit, and corporate lending scale.",
+  CSCO: "The foundational networking and enterprise cybersecurity hardware/software provider powering global internet and enterprise infrastructure.",
+  MRK: "A global biopharmaceutical giant anchored by blockbuster oncology immunotherapy and vaccine franchises."
 };
 
 
@@ -1401,7 +1415,7 @@ export default function Dashboard() {
                 </div>
                 {[
                   { id: 'topMovers', label: 'Top Movers & Leaders' },
-                  { id: 'topMarketCap', label: 'Top 10 by Market Cap' },
+                  { id: 'topMarketCap', label: 'Top 20 by Market Cap' },
                   { id: 'performanceChart', label: 'Performance Chart' },
                   { id: 'allocationCharts', label: 'Sector & Industry Charts' },
                 ].map(w => (

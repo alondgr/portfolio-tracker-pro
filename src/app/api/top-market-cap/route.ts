@@ -10,7 +10,9 @@ let cachedTopMarketCap: { timestamp: number; results: any[] } | null = null;
 const MEGACAP_POOL = [
   'AAPL', 'NVDA', 'MSFT', 'AMZN', 'GOOGL', 'META', 'TSM', 'BRK-B', 'AVGO', 'TSLA',
   'LLY', 'WMT', 'JPM', 'V', 'XOM', 'ORCL', 'UNH', 'MA', 'NFLX', 'COST',
-  'JNJ', 'PG', 'HD', 'ABBV', 'BAC', 'SAP', 'ASML', 'CRM', 'AMD', 'CVX'
+  'JNJ', 'PG', 'HD', 'ABBV', 'BAC', 'SAP', 'ASML', 'CRM', 'AMD', 'CVX',
+  'KO', 'TMUS', 'WFC', 'CSCO', 'MRK', 'ACN', 'NOW', 'AXP', 'IBM', 'PEP',
+  'MCD', 'LIN', 'TMO', 'ABT', 'ISRG', 'GE', 'CAT', 'GS', 'UBER', 'BKNG'
 ];
 
 const SECTOR_MAP: Record<string, string> = {
@@ -44,11 +46,35 @@ const SECTOR_MAP: Record<string, string> = {
   CRM: 'Technology',
   AMD: 'Technology',
   CVX: 'Energy',
+  KO: 'Consumer Defensive',
+  TMUS: 'Communication Services',
+  WFC: 'Financial Services',
+  CSCO: 'Technology',
+  MRK: 'Healthcare',
+  ACN: 'Technology',
+  NOW: 'Technology',
+  AXP: 'Financial Services',
+  IBM: 'Technology',
+  PEP: 'Consumer Defensive',
+  MCD: 'Consumer Cyclical',
+  LIN: 'Basic Materials',
+  TMO: 'Healthcare',
+  ABT: 'Healthcare',
+  ISRG: 'Healthcare',
+  GE: 'Industrials',
+  CAT: 'Industrials',
+  GS: 'Financial Services',
+  UBER: 'Technology',
+  BKNG: 'Consumer Cyclical',
 };
 
 export async function GET() {
   try {
-    if (cachedTopMarketCap && Date.now() - cachedTopMarketCap.timestamp < CACHE_TTL_MS) {
+    if (
+      cachedTopMarketCap &&
+      cachedTopMarketCap.results.length >= 20 &&
+      Date.now() - cachedTopMarketCap.timestamp < CACHE_TTL_MS
+    ) {
       return NextResponse.json(
         { results: cachedTopMarketCap.results, cached: true },
         { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=120' } }
@@ -83,7 +109,7 @@ export async function GET() {
         trailingPE: q.trailingPE || null,
       }))
       .sort((a: any, b: any) => b.marketCap - a.marketCap)
-      .slice(0, 10)
+      .slice(0, 20)
       .map((item: any, idx: number) => ({
         ...item,
         rank: idx + 1,
