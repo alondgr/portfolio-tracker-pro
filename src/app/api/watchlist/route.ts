@@ -97,7 +97,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const { userId } = await auth();
-    if (!userId) return new NextResponse('Unauthorized', { status: 401 });
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await request.json();
     const { action, symbol, id } = body;

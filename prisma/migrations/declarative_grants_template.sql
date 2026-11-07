@@ -17,6 +17,14 @@ CREATE TABLE IF NOT EXISTS public.portfolio_snapshots (
 
 -- Explicit Data API Grants (Mandatory post-October 30, 2026)
 GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+
+-- Ensure future tables created in public automatically inherit Data API grants
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO authenticated;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+GRANT ALL ON TABLES TO service_role;
+
 REVOKE ALL ON public.portfolio_snapshots FROM anon;
 GRANT SELECT, INSERT ON public.portfolio_snapshots TO authenticated;
 GRANT ALL ON public.portfolio_snapshots TO service_role;
