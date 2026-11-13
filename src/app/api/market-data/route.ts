@@ -83,11 +83,26 @@ export async function GET(request: Request) {
     quoteBatchCache.set(cacheKey, { timestamp: Date.now(), results });
 
     return NextResponse.json(
-      { results },
+      { results, isStale: false, lastGoodTimestamp: Date.now() },
       { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=60' } }
     );
   } catch (error: any) {
     console.error('Market Data API Error:', error);
+    // Serve last-known-good cached quotes tagged with isStale: true instead of zeroing UI metrics
+    const { searchParams } = new URL(request.url);
+    const querySymbols = searchParams.get('symbols');
+    const fallbackSymbols = querySymbols
+      ? querySymbols.split(',').map(s => s.trim().toUpperCase()).filter(Boolean)
+      : ['^GSPC', '^IXIC', '^DJI', 'BTC-USD', 'ETH-USD', 'GC=F', 'SI=F', 'HG=F', 'CL=F', 'VNQ', '^VIX', '^TNX', 'DX-Y.NYB'];
+    const fallbackKey = fallbackSymbols.slice().sort((a, b) => a.localeCompare(b)).join(',');
+    const staleEntry = quoteBatchCache.get(fallbackKey);
+    if (staleEntry) {
+      return NextResponse.json({
+        results: staleEntry.results,
+        isStale: true,
+        lastGoodTimestamp: staleEntry.timestamp,
+      });
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

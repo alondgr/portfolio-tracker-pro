@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "next lint",
     "test": "node --import tsx --test \"tests/**/*.test.ts\"",
-    "test:health": "node scripts/health-scanner.js"
+    "test:health": "node scripts/health-scanner.js",
+    "db:types:remote": "npx supabase gen types typescript --remote > src/types/database.types.ts",
+    "db:push:remote": "npx supabase db push --remote --yes"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.8.3",

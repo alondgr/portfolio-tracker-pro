@@ -29,10 +29,14 @@ jobs:
         # Only fail CI on actual critical CVEs to avoid breaking on minor advisories
         run: npm audit --audit-level=critical || true
 
+      - name: Verify RSC Lockfile Integrity (GHSA-xqc2-xf4c-x3h3)
+        run: npm ls next react react-dom
+
       - name: Run Schema & Asset Verification
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://placeholder.supabase.co' }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || '' }}
+        # Note: Any unattended Supabase CLI v3 commands in CI must pass --remote --yes
         run: npm run test:health --if-present
 
       - name: Create System Maintenance Ticket (GitHub Issue)
