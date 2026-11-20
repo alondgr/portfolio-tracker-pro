@@ -25,6 +25,9 @@ const CHART_COLORS = [
 
 const COMPANY_EXPLANATIONS: Record<string, string> = {
   STRC: "High-yield preferred stock backed by massive corporate dollar and Bitcoin reserves. It delivers elite, predictable cash flow independent of traditional market indices.",
+  ANT: "Frontier artificial intelligence safety and research powerhouse behind the Claude family of foundation models, powering enterprise AI agents, coding workflows, and mission-critical reasoning infrastructure worldwide.",
+  SPCX: "The undisputed global leader in reusable orbital launch vehicles (Falcon 9, Starship) and the Starlink low-Earth-orbit satellite broadband constellation.",
+  SKHY: "Premier global semiconductor memory titan leading the production of High Bandwidth Memory (HBM) essential for hyperscale AI accelerators.",
   NVDA: "The premier architect of advanced AI microchips. They design the complex intellectual brainpower fueling the global artificial intelligence, data center, and computing revolution.",
   PLTR: "Elite data-analytics software provider securing critical military defense operations and massive corporate enterprise infrastructure. Their sticky government contracts create an ironclad economic moat.",
   COIN: "The leading regulated cryptocurrency exchange. It operates as the primary institutional gateway capturing massive transaction fees on mainstream digital asset volume.",

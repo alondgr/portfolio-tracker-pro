@@ -6,39 +6,47 @@ export const dynamic = 'force-dynamic';
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 let cachedTopMarketCap: { timestamp: number; results: any[] } | null = null;
 
-// Comprehensive deduplicated pool of the 250 largest US & global companies listed in USD on NYSE / NASDAQ.
-// Single share-class per issuer (e.g. GOOGL only, BRK-B only) to prevent duplicate company entries.
+// Duplicate secondary share-class tickers to exclude so companies aren't listed twice
+const EXCLUDED_DUPLICATE_SHARE_CLASSES = new Set([
+  'GOOG',  // Represented by GOOGL (Alphabet)
+  'BRK-A', // Represented by BRK-B (Berkshire Hathaway)
+  'FOXA',  // Dual share class
+  'NWSA',  // Dual share class
+]);
+
+// Comprehensive deduplicated pool of the largest US & global companies listed in USD on NYSE / NASDAQ.
 const MEGACAP_POOL = Array.from(new Set([
-  'AAPL', 'NVDA', 'MSFT', 'AMZN', 'GOOGL', 'META', 'TSM', 'BRK-B', 'AVGO', 'TSLA',
-  'LLY', 'WMT', 'JPM', 'V', 'XOM', 'ORCL', 'MA', 'UNH', 'NFLX', 'COST',
-  'JNJ', 'PG', 'HD', 'ABBV', 'BAC', 'SAP', 'ASML', 'CRM', 'AMD', 'CVX',
-  'KO', 'TMUS', 'WFC', 'CSCO', 'ACN', 'MRK', 'NOW', 'AXP', 'LIN', 'PEP',
-  'IBM', 'MCD', 'GE', 'ISRG', 'CAT', 'TMO', 'DIS', 'ABT', 'PM', 'GS',
-  'TXN', 'QCOM', 'INTU', 'VZ', 'AMGN', 'BKNG', 'T', 'PLTR', 'SPGI', 'BLK',
-  'NEE', 'PFE', 'SYK', 'DHR', 'LOW', 'HON', 'UNP', 'RTX', 'UBER', 'ETN',
-  'AMAT', 'C', 'CMCSA', 'COP', 'SCHW', 'PGR', 'ADP', 'BSX', 'TJX', 'BA',
-  'PANW', 'LMT', 'VRTX', 'GILD', 'DE', 'MU', 'BMY', 'CB', 'SBUX', 'ADI',
-  'MDT', 'PLD', 'MMC', 'FI', 'NKE', 'KKR', 'ANET', 'LRCX', 'KLAC', 'CRWD',
-  'MELI', 'SPOT', 'SNPS', 'CDNS', 'ICE', 'SHW', 'SO', 'MO', 'CEG', 'DUK',
-  'PH', 'WM', 'WELL', 'CME', 'MCK', 'MCO', 'APH', 'CTAS', 'MSI', 'EQIX',
-  'ITW', 'REGN', 'CL', 'ZTS', 'TDG', 'PYPL', 'EOG', 'CVS', 'ORLY', 'GD',
-  'NOC', 'SLB', 'USB', 'PNC', 'AON', 'EMR', 'TGT', 'MAR', 'FDX', 'CSX',
-  'FCX', 'NEM', 'GOLD', 'OXY', 'MSTR', 'COIN', 'DELL', 'ABNB', 'DASH', 'SNOW',
-  'APP', 'TEAM', 'WDAY', 'FTNT', 'MRVL', 'INTC', 'BABA', 'PDD', 'ARM', 'SHOP',
-  'NVS', 'AZN', 'SHEL', 'HSBC', 'TM', 'NVO', 'UL', 'SONY', 'TTE', 'RY',
-  'TD', 'SAN', 'UBS', 'RIO', 'BHP', 'SNY', 'BTI', 'RELX', 'MUFG', 'HDB',
-  'MS', 'GEV', 'BUD', 'BX', 'SMFG', 'IBKR', 'COF', 'APO', 'BN', 'HCA',
-  'SE', 'CPNG', 'NU', 'NTES', 'JD', 'TCOM', 'IBN', 'INFY', 'CNQ', 'ENB',
-  'BMO', 'BNS', 'CP', 'CNR', 'TRI', 'RACE', 'STLA', 'FERG', 'CRH', 'NGG',
-  'GSK', 'BP', 'DEO', 'ING', 'BBVA', 'ITUB', 'PBR', 'VALE', 'ABEV', 'SCCO',
-  'VST', 'TRGP', 'WMB', 'OKE', 'KMI', 'MPC', 'PSX', 'VLO', 'HLT', 'RCL',
-  'CMG', 'YUM', 'AZO', 'ROST', 'FAST', 'CPRT', 'URI', 'PWR', 'GWW', 'TT',
-  'CARR', 'OTIS', 'HWM', 'AXON', 'FICO', 'ROP', 'ADSK', 'DDOG', 'NET', 'ZS'
+  'AAPL', 'NVDA', 'MSFT', 'AMZN', 'GOOGL', 'META', 'TSM', 'SPCX', 'AVGO', 'TSLA',
+  'ANT', 'BRK-B', 'LLY', 'WMT', 'JPM', 'SKHY', 'AMD', 'V', 'MU', 'XOM',
+  'JNJ', 'MA', 'ASML', 'ORCL', 'UNH', 'NFLX', 'COST', 'ABBV', 'BAC', 'SAP',
+  'CRM', 'CVX', 'KO', 'TMUS', 'WFC', 'CSCO', 'ACN', 'MRK', 'NOW', 'AXP',
+  'LIN', 'PEP', 'IBM', 'MCD', 'GE', 'ISRG', 'CAT', 'TMO', 'DIS', 'ABT',
+  'PM', 'GS', 'TXN', 'QCOM', 'INTU', 'VZ', 'AMGN', 'BKNG', 'T', 'PLTR',
+  'SPGI', 'BLK', 'NEE', 'PFE', 'SYK', 'DHR', 'LOW', 'HON', 'UNP', 'RTX',
+  'UBER', 'ETN', 'AMAT', 'C', 'CMCSA', 'COP', 'SCHW', 'PGR', 'ADP', 'BSX',
+  'TJX', 'BA', 'PANW', 'LMT', 'VRTX', 'GILD', 'DE', 'BMY', 'CB', 'SBUX',
+  'ADI', 'MDT', 'PLD', 'MMC', 'FI', 'NKE', 'KKR', 'ANET', 'LRCX', 'KLAC',
+  'CRWD', 'MELI', 'SPOT', 'SNPS', 'CDNS', 'ICE', 'SHW', 'SO', 'MO', 'CEG',
+  'DUK', 'PH', 'WM', 'WELL', 'CME', 'MCK', 'MCO', 'APH', 'CTAS', 'MSI',
+  'EQIX', 'ITW', 'REGN', 'CL', 'ZTS', 'TDG', 'PYPL', 'EOG', 'CVS', 'ORLY',
+  'GD', 'NOC', 'SLB', 'USB', 'PNC', 'AON', 'EMR', 'TGT', 'MAR', 'FDX',
+  'CSX', 'FCX', 'NEM', 'GOLD', 'OXY', 'MSTR', 'COIN', 'DELL', 'ABNB', 'DASH',
+  'SNOW', 'APP', 'TEAM', 'WDAY', 'FTNT', 'MRVL', 'INTC', 'BABA', 'PDD', 'ARM',
+  'SHOP', 'NVS', 'AZN', 'SHEL', 'HSBC', 'TM', 'NVO', 'UL', 'SONY', 'TTE',
+  'RY', 'TD', 'SAN', 'UBS', 'RIO', 'BHP', 'SNY', 'BTI', 'RELX', 'MUFG',
+  'HDB', 'MS', 'GEV', 'BUD', 'BX', 'SMFG', 'IBKR', 'COF', 'APO', 'BN',
+  'HCA', 'SE', 'CPNG', 'NU', 'NTES', 'JD', 'TCOM', 'IBN', 'INFY', 'CNQ',
+  'ENB', 'BMO', 'BNS', 'CP', 'CNR', 'TRI', 'RACE', 'STLA', 'FERG', 'CRH',
+  'NGG', 'GSK', 'BP', 'DEO', 'ING', 'BBVA', 'ITUB', 'PBR', 'VALE', 'ABEV',
+  'SCCO', 'VST', 'TRGP', 'WMB', 'OKE', 'KMI', 'MPC', 'PSX', 'VLO', 'HLT',
+  'RCL', 'CMG', 'YUM', 'AZO', 'ROST', 'FAST', 'CPRT', 'URI', 'PWR', 'GWW',
+  'TT', 'CARR', 'OTIS', 'HWM', 'AXON', 'FICO', 'ROP', 'ADSK', 'DDOG', 'NET', 'ZS'
 ]));
 
 const SECTOR_MAP: Record<string, string> = {
   // Technology
   AAPL: 'Technology', NVDA: 'Technology', MSFT: 'Technology', TSM: 'Technology', AVGO: 'Technology',
+  ANT: 'Technology', SKHY: 'Technology',
   ORCL: 'Technology', SAP: 'Technology', ASML: 'Technology', CRM: 'Technology', AMD: 'Technology',
   CSCO: 'Technology', ACN: 'Technology', NOW: 'Technology', IBM: 'Technology', TXN: 'Technology',
   QCOM: 'Technology', INTU: 'Technology', PLTR: 'Technology', UBER: 'Technology', AMAT: 'Technology',
@@ -93,6 +101,7 @@ const SECTOR_MAP: Record<string, string> = {
   SHEL: 'Energy', TTE: 'Energy', CNQ: 'Energy', ENB: 'Energy', BP: 'Energy', PBR: 'Energy',
   TRGP: 'Energy', WMB: 'Energy', OKE: 'Energy', KMI: 'Energy', MPC: 'Energy', PSX: 'Energy', VLO: 'Energy',
   // Industrials
+  SPCX: 'Industrials',
   GE: 'Industrials', CAT: 'Industrials', HON: 'Industrials', UNP: 'Industrials', RTX: 'Industrials',
   ETN: 'Industrials', BA: 'Industrials', LMT: 'Industrials', DE: 'Industrials', PH: 'Industrials',
   WM: 'Industrials', CTAS: 'Industrials', ITW: 'Industrials', TDG: 'Industrials', GD: 'Industrials',
@@ -110,9 +119,16 @@ const SECTOR_MAP: Record<string, string> = {
   PLD: 'Real Estate', WELL: 'Real Estate', EQIX: 'Real Estate',
 };
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const extraParam = searchParams.get('extraSymbols');
+    const extraSymbols = extraParam
+      ? extraParam.split(',').map(s => s.trim().toUpperCase()).filter(Boolean)
+      : [];
+
     if (
+      extraSymbols.length === 0 &&
       cachedTopMarketCap &&
       cachedTopMarketCap.results.length >= 100 &&
       Date.now() - cachedTopMarketCap.timestamp < CACHE_TTL_MS
@@ -123,7 +139,10 @@ export async function GET() {
       );
     }
 
-    const yahooFinance = new (yf.YahooFinance || yf)({ suppressNotices: ['yahooSurvey'] });
+    const yahooFinance = new (yf.YahooFinance || yf)({
+      suppressNotices: ['yahooSurvey'],
+      validation: { logErrors: false },
+    });
     try {
       if (yahooFinance.suppressNotices) {
         yahooFinance.suppressNotices(['*']);
@@ -132,11 +151,49 @@ export async function GET() {
       // Ignore
     }
 
+    // Dynamically discover any newly IPO'd or surging >$100B mega-caps from live Yahoo Finance screeners
+    const dynamicSymbols = new Set<string>(MEGACAP_POOL);
+    extraSymbols.forEach(s => {
+      if (!EXCLUDED_DUPLICATE_SHARE_CLASSES.has(s)) dynamicSymbols.add(s);
+    });
+
+    const screenerIds = ['most_actives', 'day_gainers', 'day_losers', 'growth_technology_stocks', 'undervalued_large_caps'];
+    await Promise.all(
+      screenerIds.map(async (scrId) => {
+        try {
+          const res = await yahooFinance.screener({ scrIds: scrId as any, count: 50 }, { validateResult: false });
+          (res?.quotes || []).forEach((q: any) => {
+            if (
+              q?.symbol &&
+              q.quoteType === 'EQUITY' &&
+              (q.marketCap || 0) >= 100e9 &&
+              !EXCLUDED_DUPLICATE_SHARE_CLASSES.has(q.symbol)
+            ) {
+              dynamicSymbols.add(q.symbol);
+            }
+          });
+        } catch (e: any) {
+          (e?.result?.quotes || []).forEach((q: any) => {
+            if (
+              q?.symbol &&
+              q.quoteType === 'EQUITY' &&
+              (q.marketCap || 0) >= 100e9 &&
+              !EXCLUDED_DUPLICATE_SHARE_CLASSES.has(q.symbol)
+            ) {
+              dynamicSymbols.add(q.symbol);
+            }
+          });
+        }
+      })
+    );
+
+    const candidatePool = Array.from(dynamicSymbols).filter(s => !EXCLUDED_DUPLICATE_SHARE_CLASSES.has(s));
+
     // Fetch in parallel chunks of 65 symbols for fast, reliable Yahoo Finance batch responses
     const chunkSize = 65;
     const chunks: string[][] = [];
-    for (let i = 0; i < MEGACAP_POOL.length; i += chunkSize) {
-      chunks.push(MEGACAP_POOL.slice(i, i + chunkSize));
+    for (let i = 0; i < candidatePool.length; i += chunkSize) {
+      chunks.push(candidatePool.slice(i, i + chunkSize));
     }
 
     const chunkResponses = await Promise.all(
@@ -150,11 +207,13 @@ export async function GET() {
 
     const quoteList = chunkResponses.flatMap(q => (Array.isArray(q) ? q : [q]));
 
-    // Deduplicate by symbol and ensure valid USD marketCap
+    // Deduplicate by symbol and ensure valid USD marketCap on major exchanges
     const seenSymbols = new Set<string>();
     const mapped = quoteList
       .filter((q: any) => {
         if (!q || !q.symbol || (q.marketCap || 0) <= 0) return false;
+        if (EXCLUDED_DUPLICATE_SHARE_CLASSES.has(q.symbol)) return false;
+        if (q.quoteType && q.quoteType !== 'EQUITY') return false;
         if (q.currency && q.currency !== 'USD') return false;
         if (seenSymbols.has(q.symbol)) return false;
         seenSymbols.add(q.symbol);

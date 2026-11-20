@@ -57,7 +57,17 @@ export default function TopMarketCapWidget({
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/top-market-cap');
+      const userSymbols = Array.from(
+        new Set([
+          ...holdings.map((h: any) => h.symbol),
+          ...watchlist.map((w: any) => w.symbol),
+        ])
+      ).filter(Boolean);
+      const url =
+        userSymbols.length > 0
+          ? `/api/top-market-cap?extraSymbols=${encodeURIComponent(userSymbols.join(','))}`
+          : '/api/top-market-cap';
+      const res = await fetch(url);
       if (!res.ok) throw new Error('Failed to load market cap rankings');
       const data = await res.json();
       setCompanies(data.results || []);
