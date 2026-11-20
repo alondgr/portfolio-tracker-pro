@@ -19,7 +19,8 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # Upgrade from EOL Node 20 to patched Node 22 LTS (>= 22.23.5)
+          node-version: '22.23.5'
           cache: 'npm'
 
       - name: Install Dependencies
@@ -36,7 +37,8 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://placeholder.supabase.co' }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || '' }}
-        # Note: Any unattended Supabase CLI v3 commands in CI must pass --remote --yes
+        # Note: Any unattended Supabase CLI v3 commands in CI must pass --remote --yes.
+        # Scoped PAT Policy (Nov 12, 2026): Health scanners use read-only scopes; production branch merges require 'Production Branches: Read-write'.
         run: npm run test:health --if-present
 
       - name: Create System Maintenance Ticket (GitHub Issue)

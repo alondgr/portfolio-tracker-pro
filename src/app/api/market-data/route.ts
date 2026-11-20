@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import yf from 'yahoo-finance2';
 import { validateUtcTimestampDrift } from '@/lib/marketFetch';
+import { evaluateQuoteFreshness, normalizeTradingSession } from '@/lib/marketSession';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,14 +55,25 @@ export async function GET(request: Request) {
     // Single batch request for all symbols to respect provider burst rate limits
     const quotes = await yahooFinance.quote(symbols);
     
-    let results = (Array.isArray(quotes) ? quotes : [quotes]).map((q: any) => ({
-      symbol: q.symbol,
-      price: q.regularMarketPrice || q.postMarketPrice || 0,
-      change: q.regularMarketChangePercent || 0,
-      changeAbs: q.regularMarketChange || 0,
-      name: q.shortName || q.symbol,
-      currency: q.currency || 'USD'
-    }));
+    let results = (Array.isArray(quotes) ? quotes : [quotes]).map((q: any) => {
+      const sessionState = normalizeTradingSession(q.marketState);
+      const rawTime = q.regularMarketTime
+        ? new Date(q.regularMarketTime).toISOString()
+        : new Date().toISOString();
+      const freshness = evaluateQuoteFreshness(rawTime, sessionState);
+
+      return {
+        symbol: q.symbol,
+        price: q.regularMarketPrice || q.postMarketPrice || 0,
+        change: q.regularMarketChangePercent || 0,
+        changeAbs: q.regularMarketChange || 0,
+        name: q.shortName || q.symbol,
+        currency: q.currency || 'USD',
+        sessionState,
+        isQuoteStale: freshness.isStale,
+        freshnessLabel: freshness.label,
+      };
+    });
 
     if (querySymbols) {
       results = await Promise.all(results.map(async (r: any) => {
